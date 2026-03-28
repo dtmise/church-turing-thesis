@@ -1,7 +1,7 @@
-# thesis-of-church-web
+# The Thesis of Church
 Web-side source code for The Thesis of Church Website 
 
-## install
+## Install and Run Instructions
 1. Use Ubuntu distributive or use WSL with installed Ubuntu distributive.
 2. Install node with version >= 24.
 3. Run 'npm install' to download and install needed dependencies.
