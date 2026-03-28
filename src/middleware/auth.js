@@ -1,0 +1,28 @@
+import jwt from 'jsonwebtoken';
+import { findUserById } from '../db.js';
+
+const JWT_SECRET = 'thesis-of-church-secret-key';
+
+export function generateToken(userId) {
+    return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '24h' });
+}
+
+export function authMiddleware(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = findUserById(decoded.userId);
+        if (!user) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        req.user = user;
+        next();
+    } catch {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+}
