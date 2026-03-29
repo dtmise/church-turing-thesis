@@ -1,8 +1,8 @@
-import express from 'express';
-import authRoutes from './routes/auth.js';
+import express       from 'express';
+import authRoutes    from './routes/auth.js';
 import profileRoutes from './routes/profile.js';
-import teamsRoutes from './routes/teams.js';
-import newsRoutes from './routes/news.js';
+import teamsRoutes   from './routes/teams.js';
+import newsRoutes    from './routes/news.js';
 
 const app = express();
 

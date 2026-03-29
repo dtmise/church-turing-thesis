@@ -2,7 +2,6 @@ import jwt from 'jsonwebtoken';
 import { findUserById } from '../db.js';
 import { getEnvironmentData } from 'node:worker_threads';
 
-// TODO: Make loading of sensitive information from environment
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('There is no environment variable JWT_SECRET');
 
