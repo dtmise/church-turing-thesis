@@ -1,5 +1,5 @@
 export default async (globalConfig, projectConfig) => {
-    process.loadEnvFile('./test/test.env');
+    process.loadEnvFile('./sns/test.env');
 
     const { default: app } = await import('../src/app.js');
     const port = process.env.PORT;
