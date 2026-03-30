@@ -1,3 +1,6 @@
+import { join as joinPath, dirname, isAbsolute } from 'path';
+import { fileURLToPath } from 'url';
+
 const dbFactory = new class {
     constructor() {
         this.db = undefined;
@@ -15,7 +18,16 @@ const dbFactory = new class {
             const { default: getPgp } = await import('pg-promise');
             const pgp = getPgp();
             this.db = pgp(this.dbConfigs);
-            const initQuery = new pgp.QueryFile(initQueryFile);
+            let fullPath;
+            if (!isAbsolute(initQueryFile)) {
+                const currentFileUrl = import.meta.url;
+                const currentFilePath = fileURLToPath(currentFileUrl);
+                const currentDir = dirname(currentFilePath);
+                fullPath = joinPath(currentDir, initQueryFile);
+            } else {
+                fullPath = initQueryFile;
+            }
+            const initQuery = new pgp.QueryFile(fullPath);
             await this.db.none(initQuery);
         }
         return this.db;
