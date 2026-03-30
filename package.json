@@ -20,7 +20,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --config ./test/jest.config.js  --runInBand --verbose"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --config ./test/jest.config.js  --runInBand"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
