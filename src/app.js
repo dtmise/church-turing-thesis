@@ -28,7 +28,7 @@ app.use('/api/teams', errorPasser(teamsRoutes));
 app.use('/api/news', errorPasser(newsRoutes));
 
 if (process.env.NODE_ENV !== 'development') {
-    app.use(errorHandler);
+    app.use(errorSupresser);
 }
 
 export default app;
