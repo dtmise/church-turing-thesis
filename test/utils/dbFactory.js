@@ -22,5 +22,4 @@ const dbFactory = new class {
     }
 }();
 
-console.log('dbFactory: export: ', dbFactory);
 export default dbFactory;
