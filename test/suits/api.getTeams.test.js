@@ -8,8 +8,8 @@ describe('GET /api/teams', () => {
     let token;
 
     beforeAll(async () => {
-        const registeredUsers = await registerTeam(agent);
-        const user = registeredUsers[0];
+        const teamAndUsers = await registerTeam(agent);
+        const user = teamAndUsers.members[0];
         const res = await agent
             .post('/api/auth/login')
             .set('Content-Type', 'application/json')
