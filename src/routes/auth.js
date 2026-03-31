@@ -18,8 +18,8 @@ router.post('/register-team', async (req, res) => {
     if (members.length < 1 || members.length > 3) {
         return res.status(400).json({ error: 'Команда: от 1 до 3 участников' });
     }
-
-    const foundTeam = findTeamByName(teamName);
+    
+    const foundTeam = await findTeamByName(teamName);
     if (foundTeam) {
         return res.status(409).json({ error: 'Название команды уже занято' });
     }
@@ -80,7 +80,7 @@ router.post('/login', async (req, res) => {
     });
 });
 
-router.get('/me', async (req, res) => {
+router.get('/me', authGuard, async (req, res) => {
     const user = req.user;
     const team = await findTeamById(user.teamId);
     res.json({

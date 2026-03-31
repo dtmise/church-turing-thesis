@@ -1,4 +1,5 @@
 import getAgent from 'supertest';
+import registerTeamAndGetToken from './util/registerTeamAndGetToken';
 
 const port  = process.env.PORT;
 const agent = await getAgent(`http://localhost:${port}`);
@@ -8,12 +9,7 @@ describe(`API: PUT ${url}`, () => {
     let token;
 
     beforeAll(async () => {
-        const res = await agent
-            .post('/api/auth/login')
-            .set('Content-Type', 'application/json')
-            .send({ email: 'ivan@example.com', password: 'StrongPass123!' });
-
-        token = res.body.token;
+        token = await registerTeamAndGetToken(agent);
     });
 
     it('update user', async () => {
@@ -30,7 +26,7 @@ describe(`API: PUT ${url}`, () => {
         expect(res.body).toEqual({
             "id": expect.any(Number),
             "fullName": "Иванов Иван Иванович",
-            "email": "ivan@example.com",
+            "email": expect.any(String),
             "group": "25201"
         });
     });

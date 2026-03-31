@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { findUserById } from '../db.js';
 import { getEnvironmentData } from 'node:worker_threads';
+import { decode } from 'node:punycode';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('There is no environment variable JWT_SECRET');
@@ -9,12 +10,19 @@ export function generateToken(userId) {
     return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '24h' });
 }
 
+export function decodeUserId(token) {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded.userId;
+}
+
 export async function authGuard(req, res, next) {
+    console.log('went into authGuard');
     const authHeader = req.headers.authorization;
     console.log('authHeader', authHeader);
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'No authorization token' });
     }
+    console.log('went past is-check');
 
     const token = authHeader.split(' ')[1];
     try {

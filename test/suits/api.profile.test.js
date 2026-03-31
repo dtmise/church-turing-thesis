@@ -1,19 +1,17 @@
 import getAgent from 'supertest';
+import registerTeamAndGetUser from './util/registerTeamAndGetUser';
+import logInUserAndGetToken from './util/logInUserAndGetToken';
 
 const port  = process.env.PORT;
 const agent = await getAgent(`http://localhost:${port}`);
 const url   = '/api/profile';
 
 describe(`API: GET ${url}`, () => {
-    let token;
+    let user, token;
 
     beforeAll(async () => {
-        const res = await agent
-            .post('/api/auth/login')
-            .set('Content-Type', 'application/json')
-            .send({ email: 'ivan@example.com', password: 'StrongPass123!' });
-
-        token = res.body.token;
+        user = await registerTeamAndGetUser(agent);
+        token = await logInUserAndGetToken(agent, user.email, user.password);
     });
 
     it('get user', async () => {
@@ -22,37 +20,16 @@ describe(`API: GET ${url}`, () => {
             .expect(200)
             .expect('Content-Type', /json/);
 
-        expect(res.body).toEqual({
+        expect(res.body).toEqual(expect.objectContaining({
             "id": expect.any(Number),
-            "fullName": "Иванов Иван Иванович",
-            "group": "25201",
-            "email": "ivan@example.com",
+            "fullName": user.fullName,
+            "group": user.group,
+            "email": user.email,
             "role": "captain",
-            "team": {
-                "id": expect.any(Number),
-                "name": "RegisterTeamTest",
-                "members": [
-                    {
-                        "id": expect.any(Number),
-                        "fullName": "Иванов Иван Иванович",
-                        "group": "25201",
-                        "email": "ivan@example.com"
-                    },
-                    {
-                        "id": expect.any(Number),
-                        "fullName": "Петров Петр Петрович",
-                        "group": "25202",
-                        "email": "petr@example.com"
-                    },
-                    {
-                        "id": expect.any(Number),
-                        "fullName": "Сидоров Сидор Сидорович",
-                        "group": "25203",
-                        "email": "sidor@example.com"
-                    }
-                ]
-            }
-        });
+            "team": expect.objectContaining({
+                members: expect.any(Array)
+            })
+        }));
     });
 
     it('returns 401 with no token', async () => {

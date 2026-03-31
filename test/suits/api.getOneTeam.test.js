@@ -6,16 +6,18 @@ const port  = process.env.PORT;
 const agent = await getAgent(`http://localhost:${port}`);
 
 describe('GET /api/teams/1', () => {
-    let teamName, members, token;
+    let teamName, members, token, membersWoutPassAndWAnyId;
 
     beforeAll(async () => {
         const teamData = await registerTeam(agent);
         teamName = teamData.teamName;
         members = teamData.members;
         const user = { ...(members[0]) };
-        membersWoutPassAndWAnyId = members.map(m => {
+        const membersCopy = JSON.parse(JSON.stringify(members));
+        membersWoutPassAndWAnyId = membersCopy.map(m => {
             delete m.password;
-            return { ...m, id: expect.any(Number) };
+            delete m.email;
+            return expect.objectContaining({ ...m, id: expect.any(Number) });
         });
         token = await logInUserAndGetToken(agent, user.email, user.password); 
     });
@@ -26,10 +28,11 @@ describe('GET /api/teams/1', () => {
             .expect(200)
             .expect('Content-Type', /json/);
 
-        expect(res.body).toEqual({
+        expect(res.body).toEqual(expect.objectContaining({
             "id": expect.any(Number),
             "name": teamName,
+            "membersCount": expect.any(Number),
             "members": membersWoutPassAndWAnyId
-        });
+        }));
     });
 });

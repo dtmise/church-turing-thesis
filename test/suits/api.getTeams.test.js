@@ -22,13 +22,14 @@ describe('GET /api/teams', () => {
             .expect(200)
             .expect('Content-Type', /json/);
 
-        expect(res.body).toEqual([
-            {
+        expect(res.body).toEqual(expect.arrayContaining([
+            expect.objectContaining({
                 "id": expect.any(Number),
                 "name": teamName,
-                "membersCount": members.length
-            }
-        ]);
+                "membersCount": members.length,
+                "score": expect.any(Number)
+            })
+        ]));
     });
 
     it('returns 401 with no token', async () => {

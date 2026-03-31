@@ -5,7 +5,9 @@ const router = Router();
 
 router.get('/', async (req, res) => {
     const user = req.user;
-    const team = findTeamById(user.teamId);
+    console.log('before findTeamById, user:', user);
+    const team = await findTeamById(user.teamId);
+    console.log('before getTeamMembers, team:', team);
     const members = (await getTeamMembers(user.teamId)).map(m => ({
         id: m.id,
         fullName: m.fullName,
@@ -24,8 +26,9 @@ router.get('/', async (req, res) => {
 });
 
 router.put('/', async (req, res) => {
-    const { fullName, group } = req.body;
-    const updated = await updateUser(req.user.id, { fullName, group });
+    const { fullName: newFullName, group: newGroup } = req.body;
+    const updated = await updateUser(req.user.id, { newFullName, newGroup });
+
     if (!updated) {
         return res.status(404).json({ error: 'Пользователь не найден' });
     }

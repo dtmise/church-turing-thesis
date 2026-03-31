@@ -3,19 +3,19 @@ import dbFactory from '../test/utils/dbFactory.js';
 const db = await dbFactory.getDb('./createScheme.sql');
 
 export async function createTeam(teamName) {
-    return db.one('INSERT INTO teams(name) VALUES($1:name) RETURNING id', [teamName]);
+    return db.one('INSERT INTO teams(name) VALUES($1) RETURNING *', [teamName]);
 }
 
 export async function createUser({ fullName, group, email, passwordHash, teamId, role }) {
-    const id = await db.one(`INSERT INTO users(name, university_group, email, password_hash, team_id, role) 
+    const res = await db.one(`INSERT INTO users(name, university_group, email, password_hash, team_id, role) 
         VALUES($<fullName>,$<group>,$<email>,$<passwordHash>,$<teamId>,$<role>) RETURNING id`,
         { fullName, group, email, passwordHash, teamId, role }
-    )
-    return { id, fullName, group, email, passwordHash, teamId, role };
+    );
+    return { id: res.id, fullName, group, email, passwordHash, teamId, role };
 }
 
 export async function findUserByEmail(email) {
-    return db.one(`SELECT 
+    return db.oneOrNone(`SELECT 
         id, 
         name AS "fullName",
         university_group AS group, 
@@ -27,7 +27,7 @@ export async function findUserByEmail(email) {
 }
 
 export async function findUserById(id) {
-        return db.one(`SELECT 
+        return db.oneOrNone(`SELECT 
         id, 
         name AS "fullName",
         university_group AS group, 
@@ -39,11 +39,11 @@ export async function findUserById(id) {
 }
 
 export async function findTeamById(id) {
-    return db.one(`SELECT * FROM teams WHERE id = $1`, [id]);
+    return db.oneOrNone(`SELECT * FROM teams WHERE id = $1`, [id]);
 }
 
 export async function findTeamByName(name) {
-    return db.one(`SELECT * FROM teams WHERE name = $1`, [name]);
+    return db.oneOrNone(`SELECT * FROM teams WHERE name = $1`, [name]);
 }
 
 export async function getTeamMembers(teamId) {
@@ -63,12 +63,20 @@ export async function getAllTeams() {
 }
 
 export async function updateUser(id, { newFullName, newGroup }) {
+    console.log('user.id, newFullName, newGroup', id, newFullName, newGroup);
     const user = await db.oneOrNone(
         `UPDATE users 
         SET name = COALESCE($1, name), 
-        unviersity_group = COALESCE($2, unviersity_group) 
+        university_group = COALESCE($2, university_group) 
         WHERE id = $3 
-        RETURNING *`,
+        RETURNING
+        id, 
+        name AS "fullName",
+        university_group AS group, 
+        email, 
+        password_hash AS "passwordHash",
+        team_id AS "teamId",
+        role`,
         [newFullName, newGroup, id]
     );
     if (!user) {
@@ -79,9 +87,14 @@ export async function updateUser(id, { newFullName, newGroup }) {
 }
 
 export async function getAllNews() {
-    return db.any('SELECT * FROM news');
+    return db.any('SELECT id, title, content, published_at AS "publishedAt" FROM news');
 }
 
 export async function findNewsById(id) {
-    return db.oneOrNone('SELECT * FROM news WHERE id = $1', [id]);
+    return db.oneOrNone(`SELECT 
+        id, title, content, published_at AS "publishedAt" 
+        FROM news 
+        WHERE id = $1;`, 
+        [id]
+    );
 }

@@ -1,11 +1,22 @@
 import { Router } from 'express';
 import { getAllTeams, findTeamById, getTeamMembers } from '../db.js';
+import { clearSensInfo } from './users.js';
 
 const router = Router();
 
 router.get('/', async (req, res) => {
     const teams = await getAllTeams();
-    res.json(teams);
+    const result = [];
+    for (const t of teams) { 
+        const users = await getTeamMembers(t.id);
+        const usersWoutSensInfo = users.map(clearSensInfo);
+        result.push({ 
+            ...t, 
+            membersCount: usersWoutSensInfo.length,
+            members: usersWoutSensInfo
+        });
+    };
+    res.json(result);
 });
 
 router.get('/:id', async (req, res) => {
@@ -15,14 +26,14 @@ router.get('/:id', async (req, res) => {
         return res.status(404).json({ error: 'Команда не найдена' });
     }
 
-    const members = await getTeamMembers(teamId).map(m => ({
-        id: m.id,
-        fullName: m.fullName,
-        group: m.group,
-        email: m.email
-    }));
+    const members = await getTeamMembers(teamId);
+    const membersWoutSensInfo = members.map(clearSensInfo);
 
-    res.json({ id: team.id, name: team.name, members });
+    res.json({ 
+        ...team, 
+        membersCount: membersWoutSensInfo.length, 
+        members: membersWoutSensInfo 
+    });
 });
 
 export default router;
