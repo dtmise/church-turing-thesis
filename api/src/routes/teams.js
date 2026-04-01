@@ -2,7 +2,8 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import {
     getAllTeams, findTeamById, getTeamMembers,
-    findTeamByName, createTeam, findTeamByInviteCode, setUserTeam
+    findTeamByName, createTeam, findTeamByInviteCode, setUserTeam,
+    clearTeamMembers, deleteTeam
 } from '../db.js';
 import { clearSensInfo } from './users.js';
 
@@ -75,6 +76,34 @@ router.post('/join', async (req, res) => {
         team: { id: team.id, name: team.name, score: team.score },
         message: 'Вы присоединились к команде'
     });
+});
+
+router.delete('/', async (req, res) => {
+    if (!req.user.teamId) {
+        return res.status(400).json({ error: 'Вы не состоите в команде' });
+    }
+    if (req.user.role !== 'captain') {
+        return res.status(403).json({ error: 'Только капитан может удалить команду' });
+    }
+
+    const teamId = req.user.teamId;
+    await clearTeamMembers(teamId);
+    await deleteTeam(teamId);
+
+    res.json({ message: 'Команда удалена' });
+});
+
+router.post('/leave', async (req, res) => {
+    if (!req.user.teamId) {
+        return res.status(400).json({ error: 'Вы не состоите в команде' });
+    }
+    if (req.user.role === 'captain') {
+        return res.status(400).json({ error: 'Капитан не может покинуть команду. Удалите команду.' });
+    }
+
+    await setUserTeam(req.user.id, null, null);
+
+    res.json({ message: 'Вы покинули команду' });
 });
 
 router.get('/:id', async (req, res) => {

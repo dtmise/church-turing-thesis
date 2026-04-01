@@ -54,6 +54,14 @@
                 <span class="member-group">{{ m.group }}</span>
               </div>
             </div>
+
+            <!-- Delete / Leave team -->
+            <button v-if="profile.role === 'captain'" class="btn-danger-sm" @click="confirmAction = 'delete'">
+              Удалить команду
+            </button>
+            <button v-else class="btn-danger-outline-sm" @click="confirmAction = 'leave'">
+              Покинуть команду
+            </button>
           </div>
         </div>
 
@@ -164,6 +172,25 @@
         </template>
       </div>
     </div>
+
+    <!-- Confirm popup -->
+    <div v-if="confirmAction" class="modal" style="display:flex;" @click.self="confirmAction = null">
+      <div class="confirm-popup">
+        <div class="confirm-icon">⚠️</div>
+        <h3>{{ confirmAction === 'delete' ? 'Удалить команду?' : 'Покинуть команду?' }}</h3>
+        <p class="confirm-text">
+          {{ confirmAction === 'delete'
+            ? 'Все участники потеряют привязку к команде. Это действие необратимо.'
+            : 'Вы сможете присоединиться к другой команде позже.' }}
+        </p>
+        <div class="confirm-actions">
+          <button class="btn-cancel" @click="confirmAction = null">Отмена</button>
+          <button class="btn-confirm-danger" @click="executeConfirm">
+            {{ confirmAction === 'delete' ? 'Удалить' : 'Покинуть' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -187,6 +214,7 @@ const teamError = ref('')
 const newTeamName = ref('')
 const joinCode = ref('')
 const copied = ref(false)
+const confirmAction = ref(null)
 
 // Edit modal state
 const editOpen = ref(false)
@@ -254,6 +282,7 @@ async function onCreateTeam() {
   teamLoading.value = true
   try {
     await api.createTeam(newTeamName.value)
+    newTeamName.value = ''
     notify('Команда создана!', 'success')
     await loadData()
   } catch (e) {
@@ -268,12 +297,35 @@ async function onJoinTeam() {
   teamLoading.value = true
   try {
     await api.joinTeam(joinCode.value)
+    joinCode.value = ''
     notify('Вы присоединились к команде!', 'success')
     await loadData()
   } catch (e) {
     teamError.value = e.message
   } finally {
     teamLoading.value = false
+  }
+}
+
+async function executeConfirm() {
+  const action = confirmAction.value
+  confirmAction.value = null
+  if (action === 'delete') {
+    try {
+      await api.deleteTeam()
+      notify('Команда удалена', 'success')
+      await loadData()
+    } catch (e) {
+      notify(e.message || 'Ошибка удаления', 'error')
+    }
+  } else if (action === 'leave') {
+    try {
+      await api.leaveTeam()
+      notify('Вы покинули команду', 'success')
+      await loadData()
+    } catch (e) {
+      notify(e.message || 'Ошибка', 'error')
+    }
   }
 }
 
@@ -447,5 +499,89 @@ onMounted(async () => {
 .member-group {
   color: var(--secondary);
   font-size: 0.9rem;
+}
+.btn-danger-sm {
+  margin-top: 20px;
+  padding: 6px 14px;
+  border: 1px solid #e53935;
+  border-radius: 8px;
+  background: transparent;
+  color: #e53935;
+  font-size: 0.8rem;
+  cursor: pointer;
+  align-self: center;
+  transition: background 0.2s;
+}
+.btn-danger-sm:hover {
+  background: rgba(229, 57, 53, 0.08);
+}
+.btn-danger-outline-sm {
+  margin-top: 20px;
+  padding: 6px 14px;
+  border: 1px solid rgba(229, 57, 53, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: #e53935;
+  font-size: 0.8rem;
+  cursor: pointer;
+  align-self: center;
+  transition: background 0.2s;
+}
+.btn-danger-outline-sm:hover {
+  background: rgba(229, 57, 53, 0.08);
+}
+.confirm-popup {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.confirm-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+.confirm-popup h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.15rem;
+}
+.confirm-text {
+  color: var(--secondary);
+  font-size: 0.9rem;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.btn-cancel {
+  padding: 10px 24px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-cancel:hover {
+  background: var(--border);
+}
+.btn-confirm-danger {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 10px;
+  background: #e53935;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-confirm-danger:hover {
+  background: #c62828;
 }
 </style>
