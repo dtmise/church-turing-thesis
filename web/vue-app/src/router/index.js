@@ -9,8 +9,8 @@ const routes = [
     name: 'Dashboard',
     component: Dashboard,
     beforeEnter: (to, from, next) => {
-      const token = localStorage.getItem('token')
-      if (!token) next({ name: 'Home' })
+      const user = localStorage.getItem('user')
+      if (!user) next({ name: 'Home' })
       else next()
     }
   }

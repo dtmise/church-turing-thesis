@@ -3,36 +3,32 @@ import { api } from './api'
 
 export const auth = reactive({
   user: JSON.parse(localStorage.getItem('user') || 'null'),
-  token: localStorage.getItem('token') || null,
 
   get isAuthenticated() {
-    return !!this.token
+    return !!this.user
   },
 
-  setSession(token, user) {
-    this.token = token
+  setSession(user) {
     this.user = user
-    localStorage.setItem('token', token)
     localStorage.setItem('user', JSON.stringify(user))
     localStorage.setItem('hasLoggedIn', '1')
   },
 
-  logout() {
-    this.token = null
+  async logout() {
+    await api.logout()
     this.user = null
-    localStorage.removeItem('token')
     localStorage.removeItem('user')
   },
 
   async login(email, password) {
     const data = await api.login({ email, password })
-    this.setSession(data.token, data.user)
+    this.setSession(data.user)
     return data.user
   },
 
   async register(fullName, group, email, password) {
     const data = await api.register({ fullName, group, email, password })
-    this.setSession(data.token, data.user)
+    this.setSession(data.user)
     return data.user
   },
 

@@ -26,9 +26,14 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await createUser({ fullName, group, email, passwordHash });
     const token = generateToken(user.id);
+    res.cookie('token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 21 * 24 * 60 * 60 * 1000
+    });
 
     res.status(201).json({
-        token,
         user: { id: user.id, fullName, email, group, teamId: null, role: null },
         message: 'Регистрация успешна'
     });
@@ -46,8 +51,13 @@ router.post('/login', async (req, res) => {
     }
 
     const token = generateToken(user.id);
+    res.cookie('token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'strict',
+        maxAge: 21 * 24 * 60 * 60 * 1000
+    });
     res.json({
-        token,
         user: {
             id: user.id,
             fullName: user.fullName,
@@ -57,6 +67,11 @@ router.post('/login', async (req, res) => {
             role: user.role
         }
     });
+});
+
+router.post('/logout', (req, res) => {
+    res.clearCookie('token', { httpOnly: true, secure: true, sameSite: 'strict' });
+    res.json({ message: 'Выход выполнен' });
 });
 
 router.get('/me', authGuard, async (req, res) => {

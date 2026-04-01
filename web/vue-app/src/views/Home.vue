@@ -76,7 +76,7 @@
         </form>
       </div>
 
-      <div v-if="forgotPasswordOpen" class="modal" style="display:flex;" @click.self="forgotPasswordOpen = false">
+      <div v-if="forgotPasswordOpen" class="modal" @click.self="forgotPasswordOpen = false">
         <div class="modal-content forgot-password-modal">
           <span class="close" @click="forgotPasswordOpen = false">&times;</span>
           <h3>Забыли пароль?</h3>

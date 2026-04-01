@@ -151,7 +151,7 @@
     </main>
 
     <!-- Edit modal -->
-    <div v-if="editOpen" class="modal" style="display:flex;" @click.self="editOpen = false">
+    <div v-if="editOpen" class="modal" @click.self="editOpen = false">
       <div class="modal-content">
         <span class="close" @click="editOpen = false">&times;</span>
 
@@ -169,7 +169,7 @@
             <label>Email</label>
             <input v-model="editForm.email" type="email" required>
           </div>
-          <button type="submit" class="btn-primary">Сохранить</button>
+          <button type="submit" class="btn-submit">Сохранить</button>
         </form>
 
         <hr class="modal-divider">
@@ -184,7 +184,7 @@
             <label>Новый пароль</label>
             <input v-model="pwForm.newPassword" type="password" required minlength="4">
           </div>
-          <button type="submit" class="btn-primary">Сменить пароль</button>
+          <button type="submit" class="btn-submit">Сменить пароль</button>
         </form>
 
         <template v-if="false">
@@ -193,7 +193,7 @@
     </div>
 
     <!-- Confirm popup -->
-    <div v-if="confirmAction" class="modal" style="display:flex;" @click.self="confirmAction = null">
+    <div v-if="confirmAction" class="modal" @click.self="confirmAction = null">
       <div class="confirm-popup">
         <div class="confirm-icon">!</div>
         <h3>{{ confirmAction === 'delete' ? 'Удалить команду?' : 'Покинуть команду?' }}</h3>
@@ -530,7 +530,6 @@ onMounted(async () => {
   box-shadow: var(--shadow);
 }
 .modal {
-  display: flex;
   align-items: center;
   justify-content: center;
 }

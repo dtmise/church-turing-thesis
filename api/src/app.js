@@ -1,5 +1,6 @@
 import express       from 'express';
 import cors          from 'cors';
+import cookieParser  from 'cookie-parser';
 import inputLogMiddleware from './middleware/inputLog.js';
 import outputLogMiddleware from './middleware/outputLog.js';
 import { authGuard} from './middleware/authGuard.js'
@@ -28,10 +29,12 @@ if (process.env.NODE_ENV !== 'test') {
 const app = express();
 
 app.use(cors({
-    origin: 'https://computable.tech', // your frontend origin
+    origin: 'https://computable.tech',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type'],
+    credentials: true
 }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(inputLogMiddleware);

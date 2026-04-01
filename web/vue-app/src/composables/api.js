@@ -1,12 +1,15 @@
 const API_URL = `${window.location.origin}/api`
 
 async function request(endpoint, options = {}) {
-  const token = localStorage.getItem('token')
   const headers = { 'Content-Type': 'application/json', ...options.headers }
-  if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers })
+  const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers, credentials: 'include' })
   const data = await res.json()
+  if (res.status === 401 && !endpoint.startsWith('/auth/')) {
+    localStorage.removeItem('user')
+    window.location.href = '/'
+    throw new Error('Сессия истекла')
+  }
   if (!res.ok) throw new Error(data.error || 'Ошибка запроса')
   return data
 }
@@ -14,6 +17,7 @@ async function request(endpoint, options = {}) {
 export const api = {
   login: (creds) => request('/auth/login', { method: 'POST', body: JSON.stringify(creds) }),
   register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
   getProfile: () => request('/auth/me'),
   getTeams: () => request('/teams'),
   getNews: () => request('/news'),
