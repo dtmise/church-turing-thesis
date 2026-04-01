@@ -27,7 +27,9 @@ describe(`API: GET ${url}`, () => {
             "email": user.email,
             "role": "captain",
             "team": expect.objectContaining({
-                members: expect.any(Array)
+                id: expect.any(Number),
+                name: expect.any(String),
+                score: expect.any(Number)
             })
         }));
     });
