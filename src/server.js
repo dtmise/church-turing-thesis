@@ -1,26 +1,21 @@
 import app from './app.js';
 
+const mode = process.env.NODE_ENV ?? 'test';
 let server;
 
-if (process.env.NODE_ENV == 'production') {
-    try {
-        const https   = await import('https');
-        const fs      = await import('fs');
-        const options = {
-            key: fs.readFileSync('./sns/server.key'),
-            cert: fs.readFileSync('./sns/server.cert')
-        };
-        server = https.createServer(options, app);
-    } catch (err) {
-        throw new Error('Https is not allowed. ' + err.message);
-    }
+if (mode === 'production') {
+    const https   = await import('https');
+    const fs      = await import('fs');
+    const options = {
+        key: fs.readFileSync('./sns/server.key'),
+        cert: fs.readFileSync('./sns/server.crt')
+    };
+    server = https.createServer(options, app);
 } else {
     const http = await import('http');
     server = http.createServer(app);
 }
-
-const PORT = process.env.PORT;
-
-server.listen(PORT, () => {
-    console.log(`Server running on localhost:${PORT}`);
+const port = process.env.PORT ?? 1904;
+server.listen(port, () => {
+    console.log(`Server in ${mode} mode, running on localhost:${port}`);
 });
