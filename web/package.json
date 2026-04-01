@@ -15,8 +15,8 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "dev": "node server.js",
-    "prod": "pm2 start \"node server.js\""
+    "prod": "node server.js",
+    "daemon": "pm2 start \"node server.js\""
   },
   "dependencies": {
     "dotenv": "^17.3.1",

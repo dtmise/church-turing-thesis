@@ -19,8 +19,8 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "prod": "pm2 start \"node --experimental-vm-modules src/server.js\"",
-    "dev": "node --experimental-vm-modules src/server.js",
+    "daemon": "pm2 start \"node --experimental-vm-modules src/server.js\"",
+    "prod": "node --experimental-vm-modules src/server.js",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --config ./test/jest.config.js  --runInBand"
   },
   "dependencies": {

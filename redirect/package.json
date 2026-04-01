@@ -7,8 +7,8 @@
   "type": "module",
   "main": "redirect-server.js",
   "scripts": {
-    "prod": "pm2 start \"node redirect-server.js\"",
-    "dev": "node redirect-server.js"
+    "daemon": "pm2 start \"node redirect-server.js\"",
+    "prod": "node redirect-server.js"
   },
   "dependencies": {
     "express": "^5.2.1",
