@@ -98,3 +98,32 @@ export async function findNewsById(id) {
         [id]
     );
 }
+
+export async function updateTeamName(teamId, newName) {
+    return db.oneOrNone(
+        'UPDATE teams SET name = $1 WHERE id = $2 RETURNING *',
+        [newName, teamId]
+    );
+}
+
+export async function updateUserEmail(userId, newEmail) {
+    return db.oneOrNone(
+        `UPDATE users SET email = $1 WHERE id = $2
+        RETURNING id, name AS "fullName", university_group AS group, email, team_id AS "teamId", role`,
+        [newEmail, userId]
+    );
+}
+
+export async function updateUserPassword(userId, newPasswordHash) {
+    return db.oneOrNone(
+        'UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING id',
+        [newPasswordHash, userId]
+    );
+}
+
+export async function saveContact({ email, telegram, vk }) {
+    return db.one(
+        'INSERT INTO contacts(email, telegram, vk) VALUES($1, $2, $3) RETURNING *',
+        [email || null, telegram || null, vk || null]
+    );
+}

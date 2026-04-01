@@ -4,6 +4,7 @@ import inputLogMiddleware from './middleware/inputLog.js';
 import outputLogMiddleware from './middleware/outputLog.js';
 import { authGuard} from './middleware/authGuard.js'
 import authRoutes    from './routes/auth.js';
+import contactsRoutes from './routes/contacts.js';
 import profileRoutes from './routes/profile.js';
 import teamsRoutes   from './routes/teams.js';
 import newsRoutes    from './routes/news.js';
@@ -35,6 +36,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(inputLogMiddleware);
 app.use('/api/auth', errorPasser(authRoutes));
+app.use('/api/contacts', errorPasser(contactsRoutes));
 app.use(errorPasser(authGuard));
 
 app.use('/api/profile', errorPasser(profileRoutes));
