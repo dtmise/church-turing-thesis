@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
                 email: m.email,
                 role: m.role
             }));
-            team = { id: t.id, name: t.name, score: t.score, members };
+            team = { id: t.id, name: t.name, score: t.score, hash: t.hash, members };
             if (user.role === 'captain') {
                 team.invite_code = t.invite_code;
             }

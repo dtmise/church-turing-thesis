@@ -3,6 +3,8 @@
     <header class="dashboard-header">
       <h1>Church-Turing Thesis</h1>
       <div class="user-info">
+        <router-link to="/tasks" class="btn-results">Задания</router-link>
+        <router-link to="/results" class="btn-results">Результаты</router-link>
         <router-link v-if="auth.user?.isAdmin" to="/admin" class="btn-admin">Админ</router-link>
         <span class="user-name-display">{{ auth.user?.fullName }}</span>
         <button class="btn-logout" @click="onLogout">Выйти</button>
@@ -50,6 +52,15 @@
             </div>
             <div class="team-stats">
               <p><strong>Участников:</strong> {{ profile.team.members?.length || 0 }} / 3</p>
+            </div>
+
+            <div v-if="profile.team.hash" class="invite-section">
+              <label><strong>ID для тестирования:</strong></label>
+              <div class="invite-link-row">
+                <input :value="profile.team.hash" readonly class="invite-input" @click="$event.target.select()">
+                <button type="button" :class="['btn-copy', { 'btn-copy-done': copiedHash }]" @click="copyHash">{{ copiedHash ? 'Скопировано' : 'Копировать' }}</button>
+              </div>
+              <div class="input-hint">Укажите этот ID в настройках GitHub для работы pipeline</div>
             </div>
 
             <!-- Invite link (captain only, hide when team full) -->
@@ -233,6 +244,7 @@ const teamLoading = ref(false)
 const newTeamName = ref('')
 const joinCode = ref('')
 const copied = ref(false)
+const copiedHash = ref(false)
 const confirmAction = ref(null)
 const editingTeamName = ref(false)
 
@@ -377,6 +389,12 @@ function copyInvite() {
   navigator.clipboard.writeText(inviteLink.value)
   copied.value = true
   setTimeout(() => { copied.value = false }, 2000)
+}
+
+function copyHash() {
+  navigator.clipboard.writeText(profile.value.team.hash)
+  copiedHash.value = true
+  setTimeout(() => { copiedHash.value = false }, 2000)
 }
 
 function openEditModal() {
@@ -543,6 +561,20 @@ onMounted(async () => {
 .btn-admin:hover {
   background: #d0ebf9;
 }
+.btn-results {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: #F0F0F0;
+  color: #333;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-results:hover {
+  background: #E5E5E5;
+}
+
 .modal {
   align-items: center;
   justify-content: center;

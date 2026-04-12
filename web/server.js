@@ -31,6 +31,18 @@ app.use('/api', createProxyMiddleware({
 
 // Serve Vue SPA build
 const distDir = path.join(__dirname, 'frontend-dist');
+
+// Prevent sticky browser caching for favicon updates.
+app.use((req, res, next) => {
+    if (req.path === '/favicon.svg' || req.path === '/favicon.ico') {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.setHeader('Surrogate-Control', 'no-store');
+    }
+    next();
+});
+
 app.use(express.static(distDir));
 
 // SPA fallback — all non-API routes go to index.html
