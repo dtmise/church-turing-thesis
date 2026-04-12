@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
     findActivePipelineToken, findTeamByHash, findTaskByNumber,
-    pipelineUpsertScore
+    pipelineUpsertScore, getSetting
 } from '../db.js';
 
 const router = Router();
@@ -18,6 +18,14 @@ router.get('/', async (req, res) => {
     const validToken = await findActivePipelineToken(token);
     if (!validToken) {
         return res.status(403).json({ error: 'Invalid or revoked token' });
+    }
+
+    const deadline = await getSetting('results_deadline');
+    if (deadline) {
+        const deadlineDate = new Date(deadline);
+        if (!Number.isNaN(deadlineDate.getTime()) && Date.now() > deadlineDate.getTime()) {
+            return res.status(403).json({ error: 'Прием результатов завершен' });
+        }
     }
 
     // Find team by hash

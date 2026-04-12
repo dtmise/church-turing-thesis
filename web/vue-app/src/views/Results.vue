@@ -15,6 +15,11 @@
         <span v-if="frozen" class="frozen-badge">❄ Заморожены</span>
       </div>
 
+      <div v-if="deadlineText" class="deadline-banner" :class="{ 'deadline-expired': deadlineExpired }">
+        <span class="deadline-label">Прием результатов до: {{ deadlineText }}</span>
+        <span class="deadline-value">{{ deadlineExpired ? 'Прием закрыт' : `Осталось: ${countdownText}` }}</span>
+      </div>
+
       <div v-if="loading" class="loading-spinner">Загрузка...</div>
 
       <div v-else-if="hidden" class="empty-state">
@@ -73,13 +78,71 @@ const data = ref(null)
 const loading = ref(true)
 const hidden = ref(false)
 const frozen = ref(false)
+const deadlineText = ref('')
+const deadlineMs = ref(null)
+const countdownText = ref('')
+const deadlineExpired = ref(false)
+const serverNowMs = ref(Date.now())
 const isLoggedIn = !!localStorage.getItem('user')
 let pollTimer = null
+let clockTimer = null
+
+function formatDateTime(valueMs) {
+  return new Date(valueMs).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
+
+function updateCountdown() {
+  if (!deadlineMs.value) {
+    countdownText.value = ''
+    deadlineExpired.value = false
+    return
+  }
+
+  const diff = deadlineMs.value - serverNowMs.value
+  if (diff <= 0) {
+    deadlineExpired.value = true
+    countdownText.value = '00:00:00'
+    return
+  }
+
+  deadlineExpired.value = false
+  const totalSec = Math.floor(diff / 1000)
+  const hours = Math.floor(totalSec / 3600)
+  const minutes = Math.floor((totalSec % 3600) / 60)
+  const seconds = totalSec % 60
+  countdownText.value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
 
 async function fetchResults() {
   try {
     const res = await fetch(`${window.location.origin}/api/results`, { credentials: 'include' })
     const json = await res.json()
+
+    if (json.serverTime) {
+      const parsedNow = new Date(json.serverTime).getTime()
+      if (!Number.isNaN(parsedNow)) serverNowMs.value = parsedNow
+    }
+
+    if (json.deadline) {
+      const parsedDeadline = new Date(json.deadline).getTime()
+      if (!Number.isNaN(parsedDeadline)) {
+        deadlineMs.value = parsedDeadline
+        deadlineText.value = formatDateTime(parsedDeadline)
+      }
+    } else {
+      deadlineMs.value = null
+      deadlineText.value = ''
+    }
+    updateCountdown()
+
     if (json.hidden) {
       hidden.value = true
       data.value = null
@@ -98,10 +161,15 @@ onMounted(async () => {
   await fetchResults()
   loading.value = false
   pollTimer = setInterval(fetchResults, 5000)
+  clockTimer = setInterval(() => {
+    serverNowMs.value += 1000
+    updateCountdown()
+  }, 1000)
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  if (clockTimer) clearInterval(clockTimer)
 })
 </script>
 
@@ -125,6 +193,35 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
+}
+.deadline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid #CBE2F9;
+  background: #F5FAFF;
+  border-radius: 10px;
+}
+.deadline-expired {
+  border-color: #F5C2C2;
+  background: #FFF6F6;
+}
+.deadline-label {
+  color: #2F4D6A;
+  font-size: 13px;
+}
+.deadline-value {
+  color: #0B66C3;
+  font-size: 13px;
+  font-weight: 700;
+}
+.deadline-expired .deadline-label,
+.deadline-expired .deadline-value {
+  color: #B42318;
 }
 .results-page {
   min-height: 100vh;

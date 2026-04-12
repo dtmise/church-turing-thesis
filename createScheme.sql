@@ -63,7 +63,8 @@ INSERT INTO settings(key, value) VALUES
     ('results_visible', 'false'),
     ('tasks_visible', 'false'),
     ('results_frozen', 'false'),
-    ('frozen_snapshot', '');
+    ('frozen_snapshot', ''),
+    ('results_deadline', '');
 
 CREATE TABLE pipeline_tokens (
     id              SERIAL       PRIMARY KEY,

@@ -156,7 +156,7 @@ router.put('/scores', async (req, res) => {
 // Settings
 router.get('/settings', async (req, res) => {
     const settings = await getAllSettings();
-    res.json(settings);
+    res.json({ ...settings, serverTime: new Date().toISOString() });
 });
 
 router.put('/settings', async (req, res) => {

@@ -30,5 +30,6 @@ INSERT INTO settings(key, value) VALUES
     ('results_visible', 'false'),
     ('tasks_visible', 'false'),
     ('results_frozen', 'false'),
-    ('frozen_snapshot', '')
+    ('frozen_snapshot', ''),
+    ('results_deadline', '')
 ON CONFLICT (key) DO NOTHING;

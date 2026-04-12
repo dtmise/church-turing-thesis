@@ -228,6 +228,20 @@
             <span class="toggle-label">Заморозка результатов</span>
             <span v-if="resultsFrozen" class="toggle-hint">Пользователи видят снимок, вы редактируете вживую</span>
           </label>
+
+          <div class="deadline-panel">
+            <div class="deadline-now">Сейчас на сервере: {{ formatServerNow() }}</div>
+            <div class="deadline-controls">
+              <label class="deadline-label">Прием результатов до:</label>
+              <input v-model="resultsDeadlineLocal" type="datetime-local" class="deadline-input">
+              <button class="btn-deadline" @click="saveResultsDeadline">Сохранить дедлайн</button>
+            </div>
+            <div class="deadline-controls">
+              <label class="deadline-label">Продлить на:</label>
+              <input v-model.number="deadlineExtendMinutes" type="number" min="1" class="deadline-minutes-input">
+              <button class="btn-deadline" @click="extendResultsDeadline">Продлить N минут</button>
+            </div>
+          </div>
         </div>
         <div v-if="scoreTasks.length && scoreTeams.length" class="scores-table-wrap">
           <table class="contacts-table scores-table">
@@ -432,6 +446,8 @@ watch(tab, (val) => {
   }
 })
 onUnmounted(() => { if (scoresInterval) clearInterval(scoresInterval) })
+let serverClockTimer = null
+onUnmounted(() => { if (serverClockTimer) clearInterval(serverClockTimer) })
 const users = ref([])
 const teams = ref([])
 const news = ref([])
@@ -460,6 +476,9 @@ const deleteUserTarget = ref(null)
 const resultsVisible = ref(false)
 const tasksVisible = ref(false)
 const resultsFrozen = ref(false)
+const resultsDeadlineLocal = ref('')
+const deadlineExtendMinutes = ref(30)
+const serverNowMs = ref(Date.now())
 
 // Pipeline
 const pipelineTokens = ref([])
@@ -617,13 +636,90 @@ async function onScoreChange(teamId, taskId, event) {
   }
 }
 
+function toDatetimeLocalValue(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const h = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${d}T${h}:${min}`
+}
+
+function isoToDatetimeLocal(isoString) {
+  if (!isoString) return ''
+  const date = new Date(isoString)
+  if (Number.isNaN(date.getTime())) return ''
+  return toDatetimeLocalValue(date)
+}
+
+function datetimeLocalToIso(localString) {
+  if (!localString) return ''
+  const date = new Date(localString)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString()
+}
+
+function formatServerNow() {
+  return new Date(serverNowMs.value).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
+
+function startServerClock(serverTime) {
+  const parsed = new Date(serverTime)
+  if (Number.isNaN(parsed.getTime())) return
+  serverNowMs.value = parsed.getTime()
+  if (serverClockTimer) clearInterval(serverClockTimer)
+  serverClockTimer = setInterval(() => {
+    serverNowMs.value += 1000
+  }, 1000)
+}
+
 async function loadSettings() {
   try {
     const s = await api.adminGetSettings()
     resultsVisible.value = s.results_visible === 'true'
     tasksVisible.value = s.tasks_visible === 'true'
     resultsFrozen.value = s.results_frozen === 'true'
+    resultsDeadlineLocal.value = isoToDatetimeLocal(s.results_deadline)
+    if (s.serverTime) startServerClock(s.serverTime)
   } catch { /* ignore */ }
+}
+
+async function saveResultsDeadline() {
+  const iso = datetimeLocalToIso(resultsDeadlineLocal.value)
+  if (resultsDeadlineLocal.value && !iso) {
+    notify('Неверный формат даты/времени', 'error')
+    return
+  }
+  await api.adminUpdateSetting('results_deadline', iso)
+  notify(iso ? 'Дедлайн сохранен' : 'Дедлайн очищен', 'success')
+}
+
+async function extendResultsDeadline() {
+  const minutes = parseInt(deadlineExtendMinutes.value, 10)
+  if (Number.isNaN(minutes) || minutes <= 0) {
+    notify('Укажите положительное количество минут', 'error')
+    return
+  }
+
+  let base = null
+  const currentIso = datetimeLocalToIso(resultsDeadlineLocal.value)
+  if (currentIso) {
+    base = new Date(currentIso)
+  } else {
+    base = new Date(serverNowMs.value)
+  }
+
+  base.setMinutes(base.getMinutes() + minutes)
+  resultsDeadlineLocal.value = toDatetimeLocalValue(base)
+  await saveResultsDeadline()
 }
 
 async function toggleResultsVisible() {
@@ -1427,6 +1523,56 @@ textarea:focus {
   font-size: 12px;
   color: #8E8E93;
   margin-left: auto;
+}
+.deadline-panel {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed #DDDDDD;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.deadline-now {
+  font-size: 13px;
+  color: #333;
+  font-weight: 600;
+}
+.deadline-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.deadline-label {
+  font-size: 13px;
+  color: #666;
+  min-width: 130px;
+}
+.deadline-input,
+.deadline-minutes-input {
+  border: 1px solid #D8D8D8;
+  border-radius: 8px;
+  background: #fff;
+  color: #222;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+.deadline-minutes-input {
+  width: 90px;
+}
+.btn-deadline {
+  padding: 6px 12px;
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-deadline:hover {
+  background: #F5F5F5;
+  border-color: #CCC;
 }
 
 /* Pipeline */
