@@ -3,6 +3,8 @@
     <header class="dashboard-header">
       <h1>Church-Turing Thesis</h1>
       <div class="user-info">
+        <router-link to="/tasks" class="btn-results">Задания</router-link>
+        <router-link to="/results" class="btn-results">Результаты</router-link>
         <router-link v-if="auth.user?.isAdmin" to="/admin" class="btn-admin">Админ</router-link>
         <span class="user-name-display">{{ auth.user?.fullName }}</span>
         <button class="btn-logout" @click="onLogout">Выйти</button>
@@ -542,6 +544,19 @@ onMounted(async () => {
 }
 .btn-admin:hover {
   background: #d0ebf9;
+}
+.btn-results {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: #F0F0F0;
+  color: #333;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-results:hover {
+  background: #E5E5E5;
 }
 .modal {
   align-items: center;

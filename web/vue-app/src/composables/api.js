@@ -39,5 +39,21 @@ export const api = {
   adminUpdateNews: (id, title, content) => request(`/admin/news/${id}`, { method: 'PUT', body: JSON.stringify({ title, content }) }),
   adminDeleteNews: (id) => request(`/admin/news/${id}`, { method: 'DELETE' }),
   adminSetAdmin: (userId, isAdmin) => request(`/admin/users/${userId}/admin`, { method: 'PATCH', body: JSON.stringify({ isAdmin }) }),
-  adminGetContacts: () => request('/admin/contacts')
+  adminGetContacts: () => request('/admin/contacts'),
+
+  // Admin tasks
+  adminGetTasks: () => request('/admin/tasks'),
+  adminCreateTask: (number, name, description, link, maxPoints) => request('/admin/tasks', { method: 'POST', body: JSON.stringify({ number, name, description, link, maxPoints }) }),
+  adminUpdateTask: (id, number, name, description, link, maxPoints) => request(`/admin/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ number, name, description, link, maxPoints }) }),
+  adminDeleteTask: (id) => request(`/admin/tasks/${id}`, { method: 'DELETE' }),
+
+  // Admin scores
+  adminGetScores: () => request('/admin/scores'),
+  adminUpdateScore: (teamId, taskId, points) => request('/admin/scores', { method: 'PUT', body: JSON.stringify({ teamId, taskId, points }) }),
+
+  // Admin settings
+  adminGetSettings: () => request('/admin/settings'),
+  adminUpdateSetting: (key, value) => request('/admin/settings', { method: 'PUT', body: JSON.stringify({ key, value }) }),
+  adminFreezeResults: () => request('/admin/settings/freeze', { method: 'POST' }),
+  adminUnfreezeResults: () => request('/admin/settings/unfreeze', { method: 'POST' })
 }

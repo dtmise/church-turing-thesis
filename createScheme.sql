@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS scores;
+DROP TABLE IF EXISTS tasks;
 DROP TABLE IF EXISTS contacts;
 DROP TABLE IF EXISTS news;
 DROP TABLE IF EXISTS users;
@@ -34,3 +36,30 @@ CREATE TABLE users (
     is_admin        BOOLEAN      DEFAULT false,
     team_id         INTEGER      REFERENCES teams(id) ON DELETE SET NULL
 );
+
+CREATE TABLE tasks (
+    id              SERIAL       PRIMARY KEY,
+    number          INTEGER      NOT NULL    UNIQUE,
+    name            VARCHAR(255) NOT NULL,
+    description     TEXT         NOT NULL    DEFAULT '',
+    link            TEXT         NOT NULL    DEFAULT '',
+    max_points      INTEGER      NOT NULL    DEFAULT 0
+);
+
+CREATE TABLE scores (
+    team_id         INTEGER      NOT NULL    REFERENCES teams(id) ON DELETE CASCADE,
+    task_id         INTEGER      NOT NULL    REFERENCES tasks(id) ON DELETE CASCADE,
+    points          INTEGER      NOT NULL    DEFAULT 0,
+    PRIMARY KEY (team_id, task_id)
+);
+
+CREATE TABLE settings (
+    key             VARCHAR(100) PRIMARY KEY,
+    value           TEXT         NOT NULL    DEFAULT ''
+);
+
+INSERT INTO settings(key, value) VALUES
+    ('results_visible', 'false'),
+    ('tasks_visible', 'false'),
+    ('results_frozen', 'false'),
+    ('frozen_snapshot', '');

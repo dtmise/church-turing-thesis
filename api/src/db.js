@@ -198,3 +198,93 @@ export async function updateNews(id, title, content) {
 export async function deleteNews(id) {
     return db.result('DELETE FROM news WHERE id = $1', [id]);
 }
+
+// Tasks
+export async function getAllTasks() {
+    return db.any('SELECT id, number, name, description, link, max_points AS "maxPoints" FROM tasks ORDER BY number');
+}
+
+export async function findTaskById(id) {
+    return db.oneOrNone('SELECT id, number, name, description, link, max_points AS "maxPoints" FROM tasks WHERE id = $1', [id]);
+}
+
+export async function createTask({ number, name, description, link, maxPoints }) {
+    return db.one(
+        'INSERT INTO tasks(number, name, description, link, max_points) VALUES($1, $2, $3, $4, $5) RETURNING id, number, name, description, link, max_points AS "maxPoints"',
+        [number, name, description || '', link || '', maxPoints || 0]
+    );
+}
+
+export async function updateTask(id, { number, name, description, link, maxPoints }) {
+    return db.oneOrNone(
+        'UPDATE tasks SET number=$1, name=$2, description=$3, link=$4, max_points=$5 WHERE id=$6 RETURNING id, number, name, description, link, max_points AS "maxPoints"',
+        [number, name, description || '', link || '', maxPoints || 0, id]
+    );
+}
+
+export async function deleteTask(id) {
+    return db.result('DELETE FROM tasks WHERE id = $1', [id]);
+}
+
+// Scores
+export async function getScoresForTeam(teamId) {
+    return db.any('SELECT task_id AS "taskId", points FROM scores WHERE team_id = $1', [teamId]);
+}
+
+export async function getAllScores() {
+    return db.any('SELECT team_id AS "teamId", task_id AS "taskId", points FROM scores');
+}
+
+export async function upsertScore(teamId, taskId, points) {
+    return db.one(
+        `INSERT INTO scores(team_id, task_id, points) VALUES($1, $2, $3)
+         ON CONFLICT (team_id, task_id) DO UPDATE SET points = $3
+         RETURNING team_id AS "teamId", task_id AS "taskId", points`,
+        [teamId, taskId, points]
+    );
+}
+
+// Results (public scoreboard)
+export async function getResults() {
+    const teams = await db.any('SELECT id, name FROM teams ORDER BY name');
+    const tasks = await db.any('SELECT id, number, name, max_points AS "maxPoints" FROM tasks ORDER BY number');
+    const scores = await db.any('SELECT team_id AS "teamId", task_id AS "taskId", points FROM scores');
+
+    const scoreMap = {};
+    for (const s of scores) {
+        if (!scoreMap[s.teamId]) scoreMap[s.teamId] = {};
+        scoreMap[s.teamId][s.taskId] = s.points;
+    }
+
+    const rows = teams.map(t => ({
+        teamId: t.id,
+        teamName: t.name,
+        scores: tasks.map(task => scoreMap[t.id]?.[task.id] || 0),
+        total: tasks.reduce((sum, task) => sum + (scoreMap[t.id]?.[task.id] || 0), 0)
+    }));
+
+    rows.sort((a, b) => b.total - a.total);
+
+    return { tasks, rows };
+}
+
+// Settings
+export async function getSetting(key) {
+    const row = await db.oneOrNone('SELECT value FROM settings WHERE key = $1', [key]);
+    return row?.value ?? '';
+}
+
+export async function setSetting(key, value) {
+    return db.none(
+        `INSERT INTO settings(key, value) VALUES($1, $2)
+         ON CONFLICT (key) DO UPDATE SET value = $2`,
+        [key, value]
+    );
+}
+
+export async function getAllSettings() {
+    const rows = await db.any('SELECT key, value FROM settings');
+    const map = {};
+    for (const r of rows) map[r.key] = r.value;
+    return map;
+}

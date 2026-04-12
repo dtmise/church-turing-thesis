@@ -22,6 +22,14 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           Контакты
         </button>
+        <button :class="['nav-item', { active: tab === 'tasks' }]" @click="tab = 'tasks'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Задания
+        </button>
+        <button :class="['nav-item', { active: tab === 'scores' }]" @click="tab = 'scores'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+          Результаты
+        </button>
       </nav>
       <div class="sidebar-footer">
         <router-link to="/dashboard" class="nav-item nav-back">
@@ -159,6 +167,133 @@
         </div>
         <div v-else class="content-empty">Нет контактов</div>
       </div>
+
+      <!-- Tasks -->
+      <div v-if="tab === 'tasks'" class="content-section">
+        <div class="content-header">
+          <h2>Задания</h2>
+          <span class="header-count">{{ tasks.length }}</span>
+          <button class="btn-add" @click="openCreateTask">+ Добавить</button>
+        </div>
+        <div class="content-divider"></div>
+        <div v-if="tasks.length" class="content-list">
+          <div v-for="(t, i) in tasks" :key="t.id" class="content-row">
+            <div class="row-main">
+              <span class="row-title">{{ t.number }}. {{ t.name }}</span>
+              <span class="row-caption">{{ t.description || 'Без описания' }} · макс. {{ t.maxPoints }} баллов</span>
+            </div>
+            <div class="row-right">
+              <div class="row-actions">
+                <button class="btn-row-action" @click="openEditTask(t)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                </button>
+                <button class="btn-row-action btn-row-delete" @click="confirmDeleteTask(t)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </div>
+            <div v-if="i < tasks.length - 1" class="row-separator"></div>
+          </div>
+        </div>
+        <div v-else class="content-empty">Заданий пока нет</div>
+      </div>
+
+      <!-- Scores -->
+      <div v-if="tab === 'scores'" class="content-section">
+        <div class="content-header">
+          <h2>Результаты</h2>
+        </div>
+        <div class="content-divider"></div>
+
+        <!-- Visibility toggles -->
+        <div class="settings-toggles">
+          <label class="toggle-row" @click="toggleTasksVisible">
+            <span class="toggle-track" :class="{ 'toggle-on': tasksVisible }"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Задания видны всем</span>
+          </label>
+          <label class="toggle-row" @click="toggleResultsVisible">
+            <span class="toggle-track" :class="{ 'toggle-on': resultsVisible }"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Результаты видны всем</span>
+          </label>
+          <label class="toggle-row" @click="toggleFreeze">
+            <span class="toggle-track" :class="{ 'toggle-on': resultsFrozen, 'toggle-freeze': true }"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Заморозка результатов</span>
+            <span v-if="resultsFrozen" class="toggle-hint">Пользователи видят снимок, вы редактируете вживую</span>
+          </label>
+        </div>
+        <div v-if="scoreTasks.length && scoreTeams.length" class="scores-table-wrap">
+          <table class="contacts-table scores-table">
+            <thead>
+              <tr>
+                <th>Команда</th>
+                <th v-for="t in scoreTasks" :key="t.id" :title="t.name">{{ t.number }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="team in scoreTeams" :key="team.id">
+                <td class="score-team-name">{{ team.name }}</td>
+                <td v-for="t in scoreTasks" :key="t.id" class="score-cell">
+                  <input
+                    type="number"
+                    class="score-input"
+                    :value="getScore(team.id, t.id)"
+                    :max="t.maxPoints"
+                    min="0"
+                    @change="onScoreChange(team.id, t.id, $event)"
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="content-empty">
+          {{ !scoreTasks.length ? 'Сначала добавьте задания' : 'Нет команд' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Task modal -->
+    <div v-if="taskModal" class="modal" @click.self="taskModal = false">
+      <div class="modal-content">
+        <span class="close" @click="taskModal = false">&times;</span>
+        <h3>{{ editingTask ? 'Редактировать задание' : 'Новое задание' }}</h3>
+        <form @submit.prevent="saveTask">
+          <div class="form-group">
+            <label>Номер</label>
+            <input v-model.number="taskForm.number" type="number" required min="1">
+          </div>
+          <div class="form-group">
+            <label>Название</label>
+            <input v-model="taskForm.name" type="text" required>
+          </div>
+          <div class="form-group">
+            <label>Описание</label>
+            <textarea v-model="taskForm.description" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Ссылка на документ</label>
+            <input v-model="taskForm.link" type="url" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Макс. баллов</label>
+            <input v-model.number="taskForm.maxPoints" type="number" required min="0">
+          </div>
+          <button type="submit" class="btn-submit">{{ editingTask ? 'Сохранить' : 'Создать' }}</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete task confirm -->
+    <div v-if="deleteTaskTarget" class="modal" @click.self="deleteTaskTarget = null">
+      <div class="confirm-popup">
+        <div class="confirm-icon">!</div>
+        <h3>Удалить задание?</h3>
+        <p class="confirm-text">«{{ deleteTaskTarget.name }}» будет удалено вместе с баллами. Это действие необратимо.</p>
+        <div class="confirm-actions">
+          <button class="btn-cancel" @click="deleteTaskTarget = null">Отмена</button>
+          <button class="btn-confirm-danger" @click="doDeleteTask">Удалить</button>
+        </div>
+      </div>
     </div>
 
     <!-- News modal -->
@@ -200,6 +335,9 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '../composables/auth'
 import { api } from '../composables/api'
+import { useNotification } from '../composables/notification'
+
+const { show: notify } = useNotification()
 
 const router = useRouter()
 const tab = ref('news')
@@ -207,11 +345,27 @@ const users = ref([])
 const teams = ref([])
 const news = ref([])
 const contacts = ref([])
+const tasks = ref([])
+
+// Scores
+const scoreTeams = ref([])
+const scoreTasks = ref([])
+const scoreMap = ref({})
 
 const newsModal = ref(false)
 const editingNews = ref(null)
 const newsForm = ref({ title: '', content: '' })
 const deleteTarget = ref(null)
+
+const taskModal = ref(false)
+const editingTask = ref(null)
+const taskForm = ref({ number: 1, name: '', description: '', link: '', maxPoints: 0 })
+const deleteTaskTarget = ref(null)
+
+// Settings
+const resultsVisible = ref(false)
+const tasksVisible = ref(false)
+const resultsFrozen = ref(false)
 
 onMounted(async () => {
   if (!auth.user?.isAdmin) {
@@ -222,16 +376,89 @@ onMounted(async () => {
 })
 
 async function loadAll() {
-  const [u, t, n, c] = await Promise.all([
+  const [u, t, n, c, tk] = await Promise.all([
     api.adminGetUsers(),
     api.adminGetTeams(),
     api.adminGetNews(),
-    api.adminGetContacts()
+    api.adminGetContacts(),
+    api.adminGetTasks()
   ])
   users.value = u
   teams.value = t
   news.value = n
   contacts.value = c
+  tasks.value = tk
+  await loadScores()
+  await loadSettings()
+}
+
+async function loadScores() {
+  try {
+    const data = await api.adminGetScores()
+    scoreTeams.value = data.teams
+    scoreTasks.value = data.tasks
+    const map = {}
+    for (const s of data.scores) {
+      if (!map[s.teamId]) map[s.teamId] = {}
+      map[s.teamId][s.taskId] = s.points
+    }
+    scoreMap.value = map
+  } catch { /* no tasks yet */ }
+}
+
+function getScore(teamId, taskId) {
+  return scoreMap.value[teamId]?.[taskId] || 0
+}
+
+async function onScoreChange(teamId, taskId, event) {
+  const points = parseInt(event.target.value) || 0
+  try {
+    await api.adminUpdateScore(teamId, taskId, points)
+    if (!scoreMap.value[teamId]) scoreMap.value[teamId] = {}
+    scoreMap.value[teamId][taskId] = points
+    notify('Баллы обновлены', 'success')
+  } catch (e) {
+    notify(e.message || 'Ошибка при сохранении баллов', 'error')
+  }
+}
+
+async function loadSettings() {
+  try {
+    const s = await api.adminGetSettings()
+    resultsVisible.value = s.results_visible === 'true'
+    tasksVisible.value = s.tasks_visible === 'true'
+    resultsFrozen.value = s.results_frozen === 'true'
+  } catch { /* ignore */ }
+}
+
+async function toggleResultsVisible() {
+  const val = !resultsVisible.value
+  await api.adminUpdateSetting('results_visible', String(val))
+  resultsVisible.value = val
+  notify(val ? 'Результаты видны всем' : 'Результаты скрыты', 'success')
+}
+
+async function toggleTasksVisible() {
+  const val = !tasksVisible.value
+  await api.adminUpdateSetting('tasks_visible', String(val))
+  tasksVisible.value = val
+  notify(val ? 'Задания видны всем' : 'Задания скрыты', 'success')
+}
+
+async function toggleFreeze() {
+  try {
+    if (resultsFrozen.value) {
+      await api.adminUnfreezeResults()
+      resultsFrozen.value = false
+      notify('Результаты разморожены — показываются актуальные данные', 'success')
+    } else {
+      await api.adminFreezeResults()
+      resultsFrozen.value = true
+      notify('Результаты заморожены — пользователи видят снимок', 'success')
+    }
+  } catch (e) {
+    notify(e.message || 'Ошибка', 'error')
+  }
 }
 
 function formatDate(d) {
@@ -292,6 +519,42 @@ async function doDeleteNews() {
 function onLogout() {
   auth.logout()
   router.push('/')
+}
+
+// Task methods
+function openCreateTask() {
+  editingTask.value = null
+  taskForm.value = { number: tasks.value.length + 1, name: '', description: '', link: '', maxPoints: 0 }
+  taskModal.value = true
+}
+
+function openEditTask(item) {
+  editingTask.value = item
+  taskForm.value = { number: item.number, name: item.name, description: item.description, link: item.link || '', maxPoints: item.maxPoints }
+  taskModal.value = true
+}
+
+async function saveTask() {
+  const { number, name, description, link, maxPoints } = taskForm.value
+  if (editingTask.value) {
+    await api.adminUpdateTask(editingTask.value.id, number, name, description, link, maxPoints)
+  } else {
+    await api.adminCreateTask(number, name, description, link, maxPoints)
+  }
+  taskModal.value = false
+  tasks.value = await api.adminGetTasks()
+  await loadScores()
+}
+
+function confirmDeleteTask(item) {
+  deleteTaskTarget.value = item
+}
+
+async function doDeleteTask() {
+  await api.adminDeleteTask(deleteTaskTarget.value.id)
+  deleteTaskTarget.value = null
+  tasks.value = await api.adminGetTasks()
+  await loadScores()
 }
 
 async function toggleAdmin(user) {
@@ -787,5 +1050,104 @@ textarea:focus {
   .admin-content {
     padding: 20px;
   }
+}
+
+/* Scores table */
+.scores-table-wrap {
+  margin-top: 4px;
+  overflow-x: auto;
+}
+.scores-table th {
+  text-align: center;
+}
+.score-team-name {
+  font-weight: 500;
+  color: #000;
+  white-space: nowrap;
+  text-align: left !important;
+}
+.score-cell {
+  text-align: center;
+  padding: 4px 6px !important;
+}
+.score-input {
+  width: 56px;
+  padding: 5px 4px;
+  text-align: center;
+  border: 1px solid #E5E5E5;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: #000;
+  transition: border-color 0.15s;
+  -moz-appearance: textfield;
+}
+.score-input::-webkit-outer-spin-button,
+.score-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.score-input:focus {
+  outline: none;
+  border-color: #999;
+}
+
+/* Settings toggles */
+.settings-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  background: #FAFAFA;
+  border: 1px solid #E5E5E5;
+  border-radius: 10px;
+}
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: #D1D1D6;
+  border-radius: 12px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-track.toggle-on {
+  background: #34C759;
+}
+.toggle-track.toggle-freeze.toggle-on {
+  background: #007AFF;
+}
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transition: transform 0.2s;
+}
+.toggle-on .toggle-thumb {
+  transform: translateX(20px);
+}
+.toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+.toggle-hint {
+  font-size: 12px;
+  color: #8E8E93;
+  margin-left: auto;
 }
 </style>

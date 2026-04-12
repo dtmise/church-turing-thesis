@@ -48,3 +48,14 @@ docker compose -f docker-compose.server.yml logs caddy --tail=100
 docker compose -f docker-compose.server.yml logs web --tail=100
 docker compose -f docker-compose.server.yml logs api --tail=100
 ```
+
+# Add admin user
+```bash
+docker compose -f docker-compose.server.yml exec db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE users SET is_admin = true WHERE email = '\''admin@mail.ru'\'';"'
+```
+
+# Migration
+```bash
+docker compose -f docker-compose.server.yml exec -T db sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < migration_add_tasks.sql
+docker compose -f docker-compose.server.yml up -d --build
+```

@@ -10,6 +10,8 @@ import profileRoutes from './routes/profile.js';
 import teamsRoutes   from './routes/teams.js';
 import newsRoutes    from './routes/news.js';
 import adminRoutes   from './routes/admin.js';
+import resultsRoutes from './routes/results.js';
+import tasksRoutes   from './routes/tasks.js';
 import errorSupresser from './middleware/errorSupresser.js';
 
 let errorPasser;
@@ -42,6 +44,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(inputLogMiddleware);
 app.use('/api/auth', errorPasser(authRoutes));
 app.use('/api/contacts', errorPasser(contactsRoutes));
+app.use('/api/results', errorPasser(resultsRoutes));
+app.use('/api/tasks', errorPasser(tasksRoutes));
 app.use(errorPasser(authGuard));
 
 app.use('/api/profile', errorPasser(profileRoutes));
