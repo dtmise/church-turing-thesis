@@ -6,7 +6,7 @@ import {
     getAllScores, upsertScore, getAllTeams, findTaskById,
     getAllSettings, setSetting, getResults,
     createPipelineToken, getAllPipelineTokens, revokePipelineToken,
-    clearTeamMembers, deleteTeam
+    clearTeamMembers, deleteTeam, deleteUser
 } from '../db.js';
 
 const router = Router();
@@ -37,6 +37,15 @@ router.patch('/users/:id/admin', async (req, res) => {
     const result = await setAdmin(userId, isAdmin);
     if (!result) return res.status(404).json({ error: 'Пользователь не найден' });
     res.json(result);
+});
+
+router.delete('/users/:id', async (req, res) => {
+    const userId = parseInt(req.params.id);
+    if (userId === req.user.id) {
+        return res.status(400).json({ error: 'Нельзя удалить самого себя' });
+    }
+    await deleteUser(userId);
+    res.json({ success: true });
 });
 
 // Contacts

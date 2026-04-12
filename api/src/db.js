@@ -159,6 +159,10 @@ export async function setUserTeam(userId, teamId, role) {
     );
 }
 
+export async function deleteUser(userId) {
+    return db.none('DELETE FROM users WHERE id = $1', [userId]);
+}
+
 export async function clearTeamMembers(teamId) {
     return db.none('UPDATE users SET team_id = NULL, role = NULL WHERE team_id = $1', [teamId]);
 }

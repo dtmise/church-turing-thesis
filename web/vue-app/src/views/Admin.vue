@@ -99,6 +99,7 @@
                 :class="u.isAdmin ? 'btn-admin-revoke' : 'btn-admin-promote'"
                 @click="toggleAdmin(u)"
               >{{ u.isAdmin ? 'Разжаловать' : 'Сделать админом' }}</button>
+              <button v-if="u.id !== auth.user.id" class="btn-row-action btn-row-delete" @click="confirmDeleteUser(u)">Удалить</button>
               <span v-if="u.isAdmin" class="badge badge-admin">admin</span>
               <span v-if="u.role" class="badge badge-role">{{ u.role }}</span>
               <span v-if="!u.teamId" class="badge badge-noteam">без команды</span>
@@ -368,6 +369,19 @@
       </div>
     </div>
 
+    <!-- Delete user confirm -->
+    <div v-if="deleteUserTarget" class="modal" @click.self="deleteUserTarget = null">
+      <div class="confirm-popup">
+        <div class="confirm-icon">!</div>
+        <h3>Удалить пользователя?</h3>
+        <p class="confirm-text">Пользователь «{{ deleteUserTarget.fullName }}» будет удалён. Это действие необратимо.</p>
+        <div class="confirm-actions">
+          <button class="btn-cancel" @click="deleteUserTarget = null">Отмена</button>
+          <button class="btn-confirm-danger" @click="doDeleteUser">Удалить</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Delete team confirm -->
     <div v-if="deleteTeamTarget" class="modal" @click.self="deleteTeamTarget = null">
       <div class="confirm-popup">
@@ -438,6 +452,7 @@ const editingTask = ref(null)
 const taskForm = ref({ number: 1, name: '', description: '', link: '', maxPoints: 0 })
 const deleteTaskTarget = ref(null)
 const deleteTeamTarget = ref(null)
+const deleteUserTarget = ref(null)
 
 // Settings
 const resultsVisible = ref(false)
@@ -703,6 +718,17 @@ async function toggleAdmin(user) {
   const newStatus = !user.isAdmin
   await api.adminSetAdmin(user.id, newStatus)
   user.isAdmin = newStatus
+}
+
+function confirmDeleteUser(item) {
+  deleteUserTarget.value = item
+}
+
+async function doDeleteUser() {
+  await api.adminDeleteUser(deleteUserTarget.value.id)
+  deleteUserTarget.value = null
+  users.value = await api.adminGetUsers()
+  teams.value = await api.adminGetTeams()
 }
 </script>
 

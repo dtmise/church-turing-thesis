@@ -33,6 +33,7 @@ export const api = {
 
   // Admin
   adminGetUsers: () => request('/admin/users'),
+  adminDeleteUser: (id) => request(`/admin/users/${id}`, { method: 'DELETE' }),
   adminGetTeams: () => request('/admin/teams'),
   adminDeleteTeam: (id) => request(`/admin/teams/${id}`, { method: 'DELETE' }),
   adminGetNews: () => request('/admin/news'),
