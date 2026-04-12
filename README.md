@@ -49,6 +49,9 @@ docker compose down -v
 docker compose up -d --build
 ```
 
+### Почта администратора: admin@test.com
+### Все пользователи имею пароль: 123456
+
 ## 2. Развертывание на сервере (production)
 
 Продакшн-стек использует `docker-compose.server.yml` и Caddy как reverse proxy с TLS.
