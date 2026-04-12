@@ -88,16 +88,20 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 16px 32px;
   border-bottom: 1px solid #E5E5E5;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .tasks-header h1 {
   font-size: 17px;
   font-weight: 700;
   color: #000;
   letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 .header-right {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .btn-nav {
   padding: 6px 14px;
@@ -224,5 +228,12 @@ onUnmounted(() => {
   text-align: center;
   font-size: 15px;
   color: #8E8E93;
+}
+@media (max-width: 600px) {
+  .tasks-header { padding: 12px 16px; }
+  .tasks-main { padding: 20px 12px; }
+  .tasks-main h2 { font-size: 18px; }
+  .btn-nav { padding: 5px 10px; font-size: 12px; }
+  .task-card { padding: 14px 16px; }
 }
 </style>

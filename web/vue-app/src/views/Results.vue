@@ -111,16 +111,20 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 16px 32px;
   border-bottom: 1px solid #E5E5E5;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .results-header h1 {
   font-size: 17px;
   font-weight: 700;
   color: #000;
   letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 .header-right {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .btn-back {
   padding: 6px 14px;
@@ -290,5 +294,12 @@ onUnmounted(() => {
   font-size: 12px;
   color: #8E8E93;
   flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .results-header { padding: 12px 16px; }
+  .results-main { padding: 20px 12px; }
+  .results-main h2 { font-size: 18px; }
+  .results-table { font-size: 12px; }
+  .btn-back { padding: 5px 10px; font-size: 12px; }
 }
 </style>
