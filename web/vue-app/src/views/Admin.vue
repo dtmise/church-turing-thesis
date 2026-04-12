@@ -411,7 +411,12 @@ function getScore(teamId, taskId) {
 }
 
 async function onScoreChange(teamId, taskId, event) {
-  const points = parseInt(event.target.value) || 0
+  const task = scoreTasks.value.find(t => t.id === taskId)
+  const max = task ? task.maxPoints : Infinity
+  let points = parseInt(event.target.value) || 0
+  if (points < 0) points = 0
+  if (points > max) points = max
+  event.target.value = points
   try {
     await api.adminUpdateScore(teamId, taskId, points)
     if (!scoreMap.value[teamId]) scoreMap.value[teamId] = {}

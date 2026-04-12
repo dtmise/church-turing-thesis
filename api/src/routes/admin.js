@@ -3,7 +3,7 @@ import {
     getAllUsers, getAllTeamsWithMembers, getAllNews,
     createNews, updateNews, deleteNews, setAdmin, getAllContacts,
     getAllTasks, createTask, updateTask, deleteTask,
-    getAllScores, upsertScore, getAllTeams,
+    getAllScores, upsertScore, getAllTeams, findTaskById,
     getAllSettings, setSetting, getResults
 } from '../db.js';
 
@@ -126,7 +126,12 @@ router.put('/scores', async (req, res) => {
     if (teamId == null || taskId == null || points == null) {
         return res.status(400).json({ error: 'Укажите teamId, taskId и points' });
     }
-    const score = await upsertScore(teamId, taskId, parseInt(points));
+    let pts = parseInt(points);
+    if (pts < 0) pts = 0;
+    const task = await findTaskById(taskId);
+    if (!task) return res.status(404).json({ error: 'Задание не найдено' });
+    if (pts > task.maxPoints) pts = task.maxPoints;
+    const score = await upsertScore(teamId, taskId, pts);
     res.json(score);
 });
 

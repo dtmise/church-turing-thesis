@@ -64,27 +64,38 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const data = ref(null)
 const loading = ref(true)
 const hidden = ref(false)
 const isLoggedIn = !!localStorage.getItem('user')
+let pollTimer = null
 
-onMounted(async () => {
+async function fetchResults() {
   try {
     const res = await fetch(`${window.location.origin}/api/results`, { credentials: 'include' })
     const json = await res.json()
     if (json.hidden) {
       hidden.value = true
+      data.value = null
     } else {
+      hidden.value = false
       data.value = json
     }
   } catch {
     // silent
-  } finally {
-    loading.value = false
   }
+}
+
+onMounted(async () => {
+  await fetchResults()
+  loading.value = false
+  pollTimer = setInterval(fetchResults, 5000)
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
 })
 </script>
 

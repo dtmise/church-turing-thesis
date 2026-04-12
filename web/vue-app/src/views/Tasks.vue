@@ -41,27 +41,38 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const tasks = ref([])
 const loading = ref(true)
 const hidden = ref(false)
 const isLoggedIn = !!localStorage.getItem('user')
+let pollTimer = null
 
-onMounted(async () => {
+async function fetchTasks() {
   try {
     const res = await fetch(`${window.location.origin}/api/tasks`, { credentials: 'include' })
     const json = await res.json()
     if (json.hidden) {
       hidden.value = true
+      tasks.value = []
     } else {
+      hidden.value = false
       tasks.value = json
     }
   } catch {
     // silent
-  } finally {
-    loading.value = false
   }
+}
+
+onMounted(async () => {
+  await fetchTasks()
+  loading.value = false
+  pollTimer = setInterval(fetchTasks, 15000)
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
 })
 </script>
 
