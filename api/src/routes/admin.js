@@ -5,7 +5,8 @@ import {
     getAllTasks, createTask, updateTask, deleteTask,
     getAllScores, upsertScore, getAllTeams, findTaskById,
     getAllSettings, setSetting, getResults,
-    createPipelineToken, getAllPipelineTokens, revokePipelineToken
+    createPipelineToken, getAllPipelineTokens, revokePipelineToken,
+    clearTeamMembers, deleteTeam
 } from '../db.js';
 
 const router = Router();
@@ -48,6 +49,13 @@ router.get('/contacts', async (req, res) => {
 router.get('/teams', async (req, res) => {
     const teams = await getAllTeamsWithMembers();
     res.json(teams);
+});
+
+router.delete('/teams/:id', async (req, res) => {
+    const teamId = parseInt(req.params.id);
+    await clearTeamMembers(teamId);
+    await deleteTeam(teamId);
+    res.json({ success: true });
 });
 
 // News CRUD

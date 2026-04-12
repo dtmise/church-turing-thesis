@@ -123,6 +123,9 @@
                 <span class="row-title">{{ t.name }}</span>
                 <span class="row-caption">{{ t.members.length }} участник{{ t.members.length === 1 ? '' : t.members.length < 5 ? 'а' : 'ов' }} · {{ t.score }} очков</span>
               </div>
+              <div class="row-actions">
+                <button class="btn-row-action btn-row-delete" @click="confirmDeleteTeam(t)">Удалить</button>
+              </div>
             </div>
             <div v-if="t.members.length" class="team-members-list">
               <div v-for="m in t.members" :key="m.id" class="member-item">
@@ -365,6 +368,19 @@
       </div>
     </div>
 
+    <!-- Delete team confirm -->
+    <div v-if="deleteTeamTarget" class="modal" @click.self="deleteTeamTarget = null">
+      <div class="confirm-popup">
+        <div class="confirm-icon">!</div>
+        <h3>Удалить команду?</h3>
+        <p class="confirm-text">Команда «{{ deleteTeamTarget.name }}» и все её участники будут отвязаны. Это действие необратимо.</p>
+        <div class="confirm-actions">
+          <button class="btn-cancel" @click="deleteTeamTarget = null">Отмена</button>
+          <button class="btn-confirm-danger" @click="doDeleteTeam">Удалить</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Delete confirm -->
     <div v-if="deleteTarget" class="modal" @click.self="deleteTarget = null">
       <div class="confirm-popup">
@@ -421,6 +437,7 @@ const taskModal = ref(false)
 const editingTask = ref(null)
 const taskForm = ref({ number: 1, name: '', description: '', link: '', maxPoints: 0 })
 const deleteTaskTarget = ref(null)
+const deleteTeamTarget = ref(null)
 
 // Settings
 const resultsVisible = ref(false)
@@ -671,6 +688,17 @@ async function doDeleteTask() {
   await loadScores()
 }
 
+function confirmDeleteTeam(item) {
+  deleteTeamTarget.value = item
+}
+
+async function doDeleteTeam() {
+  await api.adminDeleteTeam(deleteTeamTarget.value.id)
+  deleteTeamTarget.value = null
+  teams.value = await api.adminGetTeams()
+  await loadScores()
+}
+
 async function toggleAdmin(user) {
   const newStatus = !user.isAdmin
   await api.adminSetAdmin(user.id, newStatus)
@@ -857,8 +885,7 @@ async function toggleAdmin(user) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  padding: 6px 12px;
   border: none;
   background: transparent;
   border-radius: 6px;

@@ -34,6 +34,7 @@ export const api = {
   // Admin
   adminGetUsers: () => request('/admin/users'),
   adminGetTeams: () => request('/admin/teams'),
+  adminDeleteTeam: (id) => request(`/admin/teams/${id}`, { method: 'DELETE' }),
   adminGetNews: () => request('/admin/news'),
   adminCreateNews: (title, content) => request('/admin/news', { method: 'POST', body: JSON.stringify({ title, content }) }),
   adminUpdateNews: (id, title, content) => request(`/admin/news/${id}`, { method: 'PUT', body: JSON.stringify({ title, content }) }),
