@@ -225,12 +225,17 @@
           <table class="contacts-table scores-table">
             <thead>
               <tr>
+                <th class="col-place">#</th>
                 <th>Команда</th>
                 <th v-for="t in scoreTasks" :key="t.id" :title="t.name">{{ t.number }}</th>
+                <th class="col-total">Σ</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="team in scoreTeams" :key="team.id">
+              <tr v-for="(team, idx) in rankedTeams" :key="team.id" :class="{ 'row-top': idx < 3 }">
+                <td class="col-place">
+                  <span :class="['place-badge', `place-${idx + 1}`]">{{ idx + 1 }}</span>
+                </td>
                 <td class="score-team-name">{{ team.name }}</td>
                 <td v-for="t in scoreTasks" :key="t.id" class="score-cell">
                   <input
@@ -242,6 +247,7 @@
                     @change="onScoreChange(team.id, t.id, $event)"
                   >
                 </td>
+                <td class="col-total">{{ team.total }}</td>
               </tr>
             </tbody>
           </table>
@@ -331,7 +337,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '../composables/auth'
 import { api } from '../composables/api'
@@ -409,6 +415,18 @@ async function loadScores() {
 function getScore(teamId, taskId) {
   return scoreMap.value[teamId]?.[taskId] || 0
 }
+
+function getTeamTotal(teamId) {
+  const m = scoreMap.value[teamId]
+  if (!m) return 0
+  return Object.values(m).reduce((s, v) => s + v, 0)
+}
+
+const rankedTeams = computed(() => {
+  return [...scoreTeams.value]
+    .map(t => ({ ...t, total: getTeamTotal(t.id) }))
+    .sort((a, b) => b.total - a.total)
+})
 
 async function onScoreChange(teamId, taskId, event) {
   const task = scoreTasks.value.find(t => t.id === taskId)
@@ -1064,6 +1082,35 @@ textarea:focus {
 }
 .scores-table th {
   text-align: center;
+}
+.scores-table .col-place {
+  width: 40px;
+  text-align: center;
+}
+.scores-table .col-total {
+  width: 50px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #000;
+}
+.place-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  background: #F0F0F0;
+  color: #333;
+}
+.place-1 { background: #FFD60A; color: #000; }
+.place-2 { background: #D1D1D6; color: #000; }
+.place-3 { background: #C8956E; color: #fff; }
+.row-top {
+  background: #FAFAFA;
 }
 .score-team-name {
   font-weight: 500;
