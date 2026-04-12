@@ -4,7 +4,8 @@ import {
     createNews, updateNews, deleteNews, setAdmin, getAllContacts,
     getAllTasks, createTask, updateTask, deleteTask,
     getAllScores, upsertScore, getAllTeams, findTaskById,
-    getAllSettings, setSetting, getResults
+    getAllSettings, setSetting, getResults,
+    createPipelineToken, getAllPipelineTokens, revokePipelineToken
 } from '../db.js';
 
 const router = Router();
@@ -160,6 +161,22 @@ router.post('/settings/unfreeze', async (req, res) => {
     await setSetting('results_frozen', 'false');
     await setSetting('frozen_snapshot', '');
     res.json({ message: 'Результаты разморожены' });
+});
+
+// Pipeline tokens
+router.get('/pipeline-tokens', async (req, res) => {
+    const tokens = await getAllPipelineTokens();
+    res.json(tokens);
+});
+
+router.post('/pipeline-tokens', async (req, res) => {
+    const token = await createPipelineToken();
+    res.json(token);
+});
+
+router.delete('/pipeline-tokens/:id', async (req, res) => {
+    await revokePipelineToken(parseInt(req.params.id));
+    res.json({ message: 'Токен отозван' });
 });
 
 export default router;

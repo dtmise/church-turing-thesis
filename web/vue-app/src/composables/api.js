@@ -55,5 +55,10 @@ export const api = {
   adminGetSettings: () => request('/admin/settings'),
   adminUpdateSetting: (key, value) => request('/admin/settings', { method: 'PUT', body: JSON.stringify({ key, value }) }),
   adminFreezeResults: () => request('/admin/settings/freeze', { method: 'POST' }),
-  adminUnfreezeResults: () => request('/admin/settings/unfreeze', { method: 'POST' })
+  adminUnfreezeResults: () => request('/admin/settings/unfreeze', { method: 'POST' }),
+
+  // Pipeline tokens
+  adminGetPipelineTokens: () => request('/admin/pipeline-tokens'),
+  adminCreatePipelineToken: () => request('/admin/pipeline-tokens', { method: 'POST' }),
+  adminRevokePipelineToken: (id) => request(`/admin/pipeline-tokens/${id}`, { method: 'DELETE' })
 }

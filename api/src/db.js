@@ -1,9 +1,20 @@
 import dbFactory from './dbFactory.js';
 
+import crypto from 'crypto';
+
 const db = await dbFactory.getDb();
 
+function generateHash() {
+    return crypto.randomBytes(4).toString('hex');
+}
+
+function generateToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
+
 export async function createTeam(teamName, inviteCode = null) {
-    return db.one('INSERT INTO teams(name, invite_code) VALUES($1, $2) RETURNING *', [teamName, inviteCode]);
+    const hash = generateHash();
+    return db.one('INSERT INTO teams(name, invite_code, hash) VALUES($1, $2, $3) RETURNING *', [teamName, inviteCode, hash]);
 }
 
 export async function createUser({ fullName, group, email, passwordHash, teamId = null, role = null }) {
@@ -62,7 +73,7 @@ export async function getTeamMembers(teamId) {
 }
 
 export async function getAllTeams() {
-    return db.any('SELECT * FROM teams');
+    return db.any('SELECT id, name, hash FROM teams');
 }
 
 export async function updateUser(id, { newFullName, newGroup }) {
@@ -172,7 +183,7 @@ export async function setAdmin(userId, isAdmin) {
 }
 
 export async function getAllTeamsWithMembers() {
-    const teams = await db.any('SELECT id, name, invite_code AS "inviteCode", score FROM teams ORDER BY id');
+    const teams = await db.any('SELECT id, name, invite_code AS "inviteCode", score, hash FROM teams ORDER BY id');
     for (const team of teams) {
         team.members = await db.any(`SELECT 
             id, name AS "fullName", university_group AS group, email, role
@@ -287,4 +298,42 @@ export async function getAllSettings() {
     const map = {};
     for (const r of rows) map[r.key] = r.value;
     return map;
+}
+
+// Pipeline tokens
+export async function createPipelineToken() {
+    const token = generateToken();
+    return db.one('INSERT INTO pipeline_tokens(token) VALUES($1) RETURNING id, token, created_at AS "createdAt", active', [token]);
+}
+
+export async function getAllPipelineTokens() {
+    return db.any('SELECT id, token, created_at AS "createdAt", active FROM pipeline_tokens ORDER BY created_at DESC');
+}
+
+export async function revokePipelineToken(id) {
+    return db.oneOrNone('UPDATE pipeline_tokens SET active = false WHERE id = $1 RETURNING id', [id]);
+}
+
+export async function findActivePipelineToken(token) {
+    return db.oneOrNone('SELECT id FROM pipeline_tokens WHERE token = $1 AND active = true', [token]);
+}
+
+// Pipeline: find team by hash
+export async function findTeamByHash(hash) {
+    return db.oneOrNone('SELECT id, name, hash FROM teams WHERE hash = $1', [hash]);
+}
+
+// Pipeline: find task by number
+export async function findTaskByNumber(number) {
+    return db.oneOrNone('SELECT id, number, name, max_points AS "maxPoints" FROM tasks WHERE number = $1', [number]);
+}
+
+// Pipeline: upsert score (only increase)
+export async function pipelineUpsertScore(teamId, taskId, points) {
+    return db.one(
+        `INSERT INTO scores(team_id, task_id, points) VALUES($1, $2, $3)
+         ON CONFLICT (team_id, task_id) DO UPDATE SET points = GREATEST(scores.points, $3)
+         RETURNING team_id AS "teamId", task_id AS "taskId", points`,
+        [teamId, taskId, points]
+    );
 }

@@ -30,6 +30,10 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
           Результаты
         </button>
+        <button :class="['nav-item', { active: tab === 'pipeline' }]" @click="tab = 'pipeline'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Pipeline
+        </button>
       </nav>
       <div class="sidebar-footer">
         <router-link to="/dashboard" class="nav-item nav-back">
@@ -256,6 +260,46 @@
           {{ !scoreTasks.length ? 'Сначала добавьте задания' : 'Нет команд' }}
         </div>
       </div>
+
+      <!-- Pipeline -->
+      <div v-if="tab === 'pipeline'" class="content-section">
+        <div class="content-header">
+          <h2>Pipeline (тестирование)</h2>
+          <button class="btn-add" @click="createToken">+ Новый токен</button>
+        </div>
+        <div class="content-divider"></div>
+
+        <div class="pipeline-info">
+          <p class="pipeline-hint">Эндпоинт для автоматической отправки баллов:</p>
+          <code class="pipeline-url">GET /api/pipeline?team=&lt;hash&gt;&amp;task=&lt;номер&gt;&amp;score=&lt;баллы&gt;&amp;token=&lt;токен&gt;</code>
+          <p class="pipeline-hint" style="margin-top: 8px;">Баллы могут только увеличиваться, уменьшить через pipeline нельзя.</p>
+        </div>
+
+        <h3 class="pipeline-subtitle">Активные токены</h3>
+        <div v-if="pipelineTokens.length" class="pipeline-tokens-list">
+          <div v-for="t in pipelineTokens" :key="t.id" :class="['pipeline-token-card', { 'token-revoked': !t.active }]">
+            <div class="token-main">
+              <code class="token-value">{{ t.token }}</code>
+              <span class="token-date">{{ new Date(t.createdAt).toLocaleString('ru') }}</span>
+            </div>
+            <div class="token-actions">
+              <button v-if="t.active" class="btn-copy-token" @click="copyToken(t.token)">Копировать</button>
+              <button v-if="t.active" class="btn-revoke" @click="revokeToken(t.id)">Отозвать</button>
+              <span v-else class="token-revoked-badge">Отозван</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="content-empty">Нет токенов. Создайте первый.</div>
+
+        <h3 class="pipeline-subtitle" style="margin-top: 24px;">Хэши команд</h3>
+        <div v-if="teams.length" class="pipeline-teams-list">
+          <div v-for="t in teams" :key="t.id" class="pipeline-team-row">
+            <span class="pipeline-team-name">{{ t.name }}</span>
+            <code class="pipeline-team-hash">{{ t.hash || '—' }}</code>
+          </div>
+        </div>
+        <div v-else class="content-empty">Нет команд</div>
+      </div>
     </div>
 
     <!-- Task modal -->
@@ -337,7 +381,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '../composables/auth'
 import { api } from '../composables/api'
@@ -347,6 +391,16 @@ const { show: notify } = useNotification()
 
 const router = useRouter()
 const tab = ref('news')
+
+let scoresInterval = null
+watch(tab, (val) => {
+  if (val === 'scores') {
+    scoresInterval = setInterval(loadScores, 5000)
+  } else {
+    if (scoresInterval) { clearInterval(scoresInterval); scoresInterval = null }
+  }
+})
+onUnmounted(() => { if (scoresInterval) clearInterval(scoresInterval) })
 const users = ref([])
 const teams = ref([])
 const news = ref([])
@@ -373,6 +427,9 @@ const resultsVisible = ref(false)
 const tasksVisible = ref(false)
 const resultsFrozen = ref(false)
 
+// Pipeline
+const pipelineTokens = ref([])
+
 onMounted(async () => {
   if (!auth.user?.isAdmin) {
     router.replace('/dashboard')
@@ -396,6 +453,7 @@ async function loadAll() {
   tasks.value = tk
   await loadScores()
   await loadSettings()
+  await loadPipelineTokens()
 }
 
 async function loadScores() {
@@ -482,6 +540,39 @@ async function toggleFreeze() {
   } catch (e) {
     notify(e.message || 'Ошибка', 'error')
   }
+}
+
+// Pipeline functions
+async function loadPipelineTokens() {
+  try {
+    pipelineTokens.value = await api.adminGetPipelineTokens()
+  } catch { /* ignore */ }
+}
+
+async function createToken() {
+  try {
+    const t = await api.adminCreatePipelineToken()
+    pipelineTokens.value.unshift(t)
+    notify('Токен создан', 'success')
+  } catch (e) {
+    notify(e.message || 'Ошибка создания токена', 'error')
+  }
+}
+
+async function revokeToken(id) {
+  try {
+    await api.adminRevokePipelineToken(id)
+    const t = pipelineTokens.value.find(x => x.id === id)
+    if (t) t.active = false
+    notify('Токен отозван', 'success')
+  } catch (e) {
+    notify(e.message || 'Ошибка', 'error')
+  }
+}
+
+function copyToken(token) {
+  navigator.clipboard.writeText(token)
+  notify('Токен скопирован', 'success')
 }
 
 function formatDate(d) {
@@ -1201,5 +1292,135 @@ textarea:focus {
   font-size: 12px;
   color: #8E8E93;
   margin-left: auto;
+}
+
+/* Pipeline */
+.pipeline-info {
+  padding: 14px 18px;
+  background: #F5F5F7;
+  border: 1px solid #E5E5E5;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+.pipeline-hint {
+  font-size: 13px;
+  color: #8E8E93;
+  margin: 0;
+}
+.pipeline-url {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #333;
+  word-break: break-all;
+  user-select: all;
+}
+.pipeline-subtitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 10px;
+}
+.pipeline-tokens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pipeline-token-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #E5E5E5;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.pipeline-token-card.token-revoked {
+  opacity: 0.5;
+}
+.token-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.token-value {
+  font-size: 13px;
+  color: #333;
+  word-break: break-all;
+}
+.token-date {
+  font-size: 11px;
+  color: #8E8E93;
+}
+.token-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.btn-copy-token {
+  padding: 4px 10px;
+  border: 1px solid #E5E5E5;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.15s;
+}
+.btn-copy-token:hover {
+  background: #F5F5F5;
+}
+.btn-revoke {
+  padding: 4px 10px;
+  border: 1px solid rgba(255,59,48,0.2);
+  background: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #FF3B30;
+  transition: all 0.15s;
+}
+.btn-revoke:hover {
+  background: rgba(255,59,48,0.06);
+}
+.token-revoked-badge {
+  font-size: 12px;
+  color: #8E8E93;
+  padding: 4px 10px;
+  background: #F0F0F0;
+  border-radius: 6px;
+}
+.pipeline-teams-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pipeline-team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+}
+.pipeline-team-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+.pipeline-team-hash {
+  font-size: 14px;
+  font-weight: 600;
+  color: #007AFF;
+  background: #F0F5FF;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
 }
 </style>

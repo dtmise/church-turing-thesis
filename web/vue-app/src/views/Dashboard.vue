@@ -54,6 +54,15 @@
               <p><strong>Участников:</strong> {{ profile.team.members?.length || 0 }} / 3</p>
             </div>
 
+            <div v-if="profile.team.hash" class="invite-section">
+              <label><strong>ID для тестирования:</strong></label>
+              <div class="invite-link-row">
+                <input :value="profile.team.hash" readonly class="invite-input" @click="$event.target.select()">
+                <button type="button" :class="['btn-copy', { 'btn-copy-done': copiedHash }]" @click="copyHash">{{ copiedHash ? 'Скопировано' : 'Копировать' }}</button>
+              </div>
+              <div class="input-hint">Укажите этот ID в настройках GitHub для работы pipeline</div>
+            </div>
+
             <!-- Invite link (captain only, hide when team full) -->
             <div v-if="profile.role === 'captain' && profile.team.invite_code && (profile.team.members?.length || 0) < 3" class="invite-section">
               <label><strong>Ссылка-приглашение:</strong></label>
@@ -235,6 +244,7 @@ const teamLoading = ref(false)
 const newTeamName = ref('')
 const joinCode = ref('')
 const copied = ref(false)
+const copiedHash = ref(false)
 const confirmAction = ref(null)
 const editingTeamName = ref(false)
 
@@ -379,6 +389,12 @@ function copyInvite() {
   navigator.clipboard.writeText(inviteLink.value)
   copied.value = true
   setTimeout(() => { copied.value = false }, 2000)
+}
+
+function copyHash() {
+  navigator.clipboard.writeText(profile.value.team.hash)
+  copiedHash.value = true
+  setTimeout(() => { copiedHash.value = false }, 2000)
 }
 
 function openEditModal() {
@@ -558,6 +574,7 @@ onMounted(async () => {
 .btn-results:hover {
   background: #E5E5E5;
 }
+
 .modal {
   align-items: center;
   justify-content: center;

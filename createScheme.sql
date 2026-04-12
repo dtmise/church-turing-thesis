@@ -23,7 +23,8 @@ CREATE TABLE teams (
     id              SERIAL       PRIMARY KEY,
     name            VARCHAR(255) NOT NULL    UNIQUE,
     invite_code     VARCHAR(36)  UNIQUE,
-    score           INTEGER      DEFAULT 0
+    score           INTEGER      DEFAULT 0,
+    hash            VARCHAR(8)   NOT NULL    UNIQUE
 );
 
 CREATE TABLE users (
@@ -63,3 +64,10 @@ INSERT INTO settings(key, value) VALUES
     ('tasks_visible', 'false'),
     ('results_frozen', 'false'),
     ('frozen_snapshot', '');
+
+CREATE TABLE pipeline_tokens (
+    id              SERIAL       PRIMARY KEY,
+    token           VARCHAR(64)  NOT NULL UNIQUE,
+    created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+    active          BOOLEAN      NOT NULL DEFAULT true
+);

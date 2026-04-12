@@ -10,7 +10,10 @@
     </header>
 
     <main class="results-main">
-      <h2>Результаты</h2>
+      <div class="results-title-row">
+        <h2>Результаты</h2>
+        <span v-if="frozen" class="frozen-badge">❄ Заморожены</span>
+      </div>
 
       <div v-if="loading" class="loading-spinner">Загрузка...</div>
 
@@ -69,6 +72,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 const data = ref(null)
 const loading = ref(true)
 const hidden = ref(false)
+const frozen = ref(false)
 const isLoggedIn = !!localStorage.getItem('user')
 let pollTimer = null
 
@@ -79,9 +83,11 @@ async function fetchResults() {
     if (json.hidden) {
       hidden.value = true
       data.value = null
+      frozen.value = false
     } else {
       hidden.value = false
       data.value = json
+      frozen.value = !!json.frozen
     }
   } catch {
     // silent
@@ -100,6 +106,26 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.results-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.frozen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #E8F4FD;
+  color: #1976D2;
+  border: 1px solid #BBDEFB;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .results-page {
   min-height: 100vh;
   background: #fff;
@@ -152,7 +178,6 @@ onUnmounted(() => {
   font-size: 20px;
   font-weight: 700;
   color: #000;
-  margin-bottom: 20px;
   letter-spacing: -0.3px;
 }
 
