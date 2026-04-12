@@ -122,7 +122,7 @@
             <div class="content-row team-row-header">
               <div class="row-main">
                 <span class="row-title">{{ t.name }}</span>
-                <span class="row-caption">{{ t.members.length }} участник{{ t.members.length === 1 ? '' : t.members.length < 5 ? 'а' : 'ов' }} · {{ t.score }} очков</span>
+                <span class="row-caption">{{ t.members.length }} участник{{ t.members.length === 1 ? '' : t.members.length < 5 ? 'а' : 'ов' }} · {{ getTeamTotal(t.id) }} очков</span>
               </div>
               <div class="row-actions">
                 <button class="btn-row-action btn-row-delete" @click="confirmDeleteTeam(t)">Удалить</button>
@@ -441,6 +441,8 @@ let scoresInterval = null
 watch(tab, (val) => {
   if (val === 'scores') {
     scoresInterval = setInterval(loadScores, 5000)
+  } else if (val === 'teams') {
+    loadScores()
   } else {
     if (scoresInterval) { clearInterval(scoresInterval); scoresInterval = null }
   }
