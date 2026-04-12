@@ -249,9 +249,10 @@
                   <input
                     type="number"
                     class="score-input"
-                    :value="getScore(team.id, t.id)"
+                    :value="getScoreInputValue(team.id, t.id)"
                     :max="t.maxPoints"
                     min="0"
+                    @input="onScoreInput(team.id, t.id, $event)"
                     @change="onScoreChange(team.id, t.id, $event)"
                   >
                 </td>
@@ -441,6 +442,7 @@ const tasks = ref([])
 const scoreTeams = ref([])
 const scoreTasks = ref([])
 const scoreMap = ref({})
+const scoreDraftMap = ref({})
 
 const newsModal = ref(false)
 const editingNews = ref(null)
@@ -491,15 +493,88 @@ async function loadAll() {
 async function loadScores() {
   try {
     const data = await api.adminGetScores()
-    scoreTeams.value = data.teams
-    scoreTasks.value = data.tasks
-    const map = {}
-    for (const s of data.scores) {
-      if (!map[s.teamId]) map[s.teamId] = {}
-      map[s.teamId][s.taskId] = s.points
+    if (hasTeamsChanged(data.teams)) {
+      scoreTeams.value = data.teams
     }
-    scoreMap.value = map
+    if (hasTasksChanged(data.tasks)) {
+      scoreTasks.value = data.tasks
+    }
+    patchScoreMap(data.scores)
   } catch { /* no tasks yet */ }
+}
+
+function hasTeamsChanged(nextTeams) {
+  if (scoreTeams.value.length !== nextTeams.length) return true
+  for (let i = 0; i < nextTeams.length; i++) {
+    const prev = scoreTeams.value[i]
+    const next = nextTeams[i]
+    if (!prev || prev.id !== next.id || prev.name !== next.name || prev.hash !== next.hash) {
+      return true
+    }
+  }
+  return false
+}
+
+function hasTasksChanged(nextTasks) {
+  if (scoreTasks.value.length !== nextTasks.length) return true
+  for (let i = 0; i < nextTasks.length; i++) {
+    const prev = scoreTasks.value[i]
+    const next = nextTasks[i]
+    if (!prev || prev.id !== next.id || prev.number !== next.number || prev.name !== next.name || prev.maxPoints !== next.maxPoints) {
+      return true
+    }
+  }
+  return false
+}
+
+function patchScoreMap(scores) {
+  const current = scoreMap.value
+  const seen = new Set()
+
+  for (const s of scores) {
+    const key = `${s.teamId}:${s.taskId}`
+    seen.add(key)
+
+    if (hasDraftKey(key)) continue
+
+    if (!current[s.teamId]) current[s.teamId] = {}
+    if (current[s.teamId][s.taskId] !== s.points) {
+      current[s.teamId][s.taskId] = s.points
+    }
+  }
+
+  for (const teamId of Object.keys(current)) {
+    const teamScores = current[teamId]
+    for (const taskId of Object.keys(teamScores)) {
+      const key = `${teamId}:${taskId}`
+      if (hasDraftKey(key)) continue
+      if (!seen.has(key)) {
+        delete teamScores[taskId]
+      }
+    }
+    if (Object.keys(teamScores).length === 0) {
+      delete current[teamId]
+    }
+  }
+}
+
+function hasDraftKey(key) {
+  return Object.prototype.hasOwnProperty.call(scoreDraftMap.value, key)
+}
+
+function scoreKey(teamId, taskId) {
+  return `${teamId}:${taskId}`
+}
+
+function getScoreInputValue(teamId, taskId) {
+  const key = scoreKey(teamId, taskId)
+  if (hasDraftKey(key)) return scoreDraftMap.value[key]
+  return getScore(teamId, taskId)
+}
+
+function onScoreInput(teamId, taskId, event) {
+  const key = scoreKey(teamId, taskId)
+  scoreDraftMap.value[key] = event.target.value
 }
 
 function getScore(teamId, taskId) {
@@ -519,12 +594,19 @@ const rankedTeams = computed(() => {
 })
 
 async function onScoreChange(teamId, taskId, event) {
+  const key = scoreKey(teamId, taskId)
   const task = scoreTasks.value.find(t => t.id === taskId)
   const max = task ? task.maxPoints : Infinity
-  let points = parseInt(event.target.value) || 0
+  const raw = hasDraftKey(key) ? scoreDraftMap.value[key] : event.target.value
+  let points = parseInt(raw, 10)
+  if (Number.isNaN(points)) points = 0
   if (points < 0) points = 0
   if (points > max) points = max
   event.target.value = points
+  delete scoreDraftMap.value[key]
+
+  if ((scoreMap.value[teamId]?.[taskId] || 0) === points) return
+
   try {
     await api.adminUpdateScore(teamId, taskId, points)
     if (!scoreMap.value[teamId]) scoreMap.value[teamId] = {}
