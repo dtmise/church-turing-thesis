@@ -108,6 +108,16 @@ BEGIN
   ON CONFLICT (email) DO NOTHING;
 END $$;
 
+-- Extra standalone users (for admin/user management testing)
+INSERT INTO users (name, email, university_group, password_hash, role, is_admin, team_id)
+VALUES
+  ('Тестовый Пользователь 1', 'user1@test.com', '23901', '$2a$10$MsGhoB3Tt8U/4JB4E1yO..PMF.Y6zf26A03riaLWuC6gFRGereZAe', NULL, false, NULL),
+  ('Тестовый Пользователь 2', 'user2@test.com', '23902', '$2a$10$MsGhoB3Tt8U/4JB4E1yO..PMF.Y6zf26A03riaLWuC6gFRGereZAe', NULL, false, NULL),
+  ('Тестовый Пользователь 3', 'user3@test.com', '23903', '$2a$10$MsGhoB3Tt8U/4JB4E1yO..PMF.Y6zf26A03riaLWuC6gFRGereZAe', NULL, false, NULL),
+  ('Тестовый Пользователь 4', 'user4@test.com', '23904', '$2a$10$MsGhoB3Tt8U/4JB4E1yO..PMF.Y6zf26A03riaLWuC6gFRGereZAe', NULL, false, NULL),
+  ('Тестовый Пользователь 5', 'user5@test.com', '23905', '$2a$10$MsGhoB3Tt8U/4JB4E1yO..PMF.Y6zf26A03riaLWuC6gFRGereZAe', NULL, false, NULL)
+ON CONFLICT (email) DO NOTHING;
+
 -- Tasks (5 tasks)
 INSERT INTO tasks (number, name, description, max_points) VALUES
   (1, 'Сортировка', 'Реализовать алгоритм сортировки', 100),
@@ -117,6 +127,72 @@ INSERT INTO tasks (number, name, description, max_points) VALUES
   (5, 'Математика', 'Теоретико-числовые задачи', 150)
 ON CONFLICT (number) DO NOTHING;
 
+-- Additional tasks (for fuller end-to-end testing)
+INSERT INTO tasks (number, name, description, link, max_points) VALUES
+  (6,  'SQL и индексы', 'Оптимизация запросов и анализ планов выполнения', 'https://example.com/tasks/6', 120),
+  (7,  'Docker', 'Контейнеризация сервиса и настройка compose', 'https://example.com/tasks/7', 90),
+  (8,  'CI/CD', 'Сборка и деплой через pipeline', 'https://example.com/tasks/8', 130),
+  (9,  'Безопасность', 'Валидация входных данных и hardening', 'https://example.com/tasks/9', 140),
+  (10, 'REST API', 'Проектирование и версияция API', 'https://example.com/tasks/10', 100),
+  (11, 'Frontend UX', 'Улучшение интерфейса и отзывчивости', 'https://example.com/tasks/11', 110),
+  (12, 'Кэширование', 'Стратегии кэширования и инвалидирования', 'https://example.com/tasks/12', 95),
+  (13, 'Мониторинг', 'Метрики, логи и алерты', 'https://example.com/tasks/13', 105),
+  (14, 'Тестирование', 'Unit/E2E тесты и покрытие', 'https://example.com/tasks/14', 125),
+  (15, 'Архитектура', 'Рефакторинг и разделение модулей', 'https://example.com/tasks/15', 160)
+ON CONFLICT (number) DO NOTHING;
+
+-- Deterministic score matrix for all teams x tasks
+-- Re-runnable: existing rows are updated
+INSERT INTO scores (team_id, task_id, points)
+SELECT
+  tm.id,
+  tk.id,
+  CASE
+    WHEN (tm.id + tk.number) % 7 = 0 THEN 0
+    WHEN tm.id <= 3 THEN LEAST(tk.max_points, ((tk.max_points * 78) / 100) + ((tm.id * tk.number) % 19))
+    WHEN tm.id <= 6 THEN LEAST(tk.max_points, ((tk.max_points * 58) / 100) + ((tm.id * tk.number) % 23))
+    ELSE LEAST(tk.max_points, ((tm.id * 17 + tk.number * 29) % (tk.max_points + 1)))
+  END AS points
+FROM teams tm
+CROSS JOIN tasks tk
+ON CONFLICT (team_id, task_id) DO UPDATE SET points = EXCLUDED.points;
+
+-- News feed for dashboard/testing
+INSERT INTO news (title, content, published_at)
+SELECT n.title, n.content, n.published_at
+FROM (
+  VALUES
+    ('Добро пожаловать', 'Система готова к тестированию. Проверьте все сценарии.', NOW() - INTERVAL '3 days'),
+    ('Открыт прием решений', 'Команды могут отправлять результаты через pipeline.', NOW() - INTERVAL '2 days 3 hours'),
+    ('Промежуточные итоги', 'Проверяйте таблицу результатов и прогресс команд.', NOW() - INTERVAL '1 day 6 hours'),
+    ('Техническое обновление', 'Улучшена стабильность админ-панели и API.', NOW() - INTERVAL '12 hours'),
+    ('Финальный рывок', 'До дедлайна осталось мало времени. Удачи всем!', NOW() - INTERVAL '2 hours')
+) AS n(title, content, published_at)
+WHERE NOT EXISTS (SELECT 1 FROM news x WHERE x.title = n.title);
+
+-- Contacts for contacts table testing
+INSERT INTO contacts (telegram, vk)
+SELECT c.telegram, c.vk
+FROM (
+  VALUES
+    ('@alg_team_lead', 'https://vk.com/alg_team_lead'),
+    ('@coders_support', 'https://vk.com/coders_support'),
+    ('t.me/hackers_contact', 'vk.com/hackers_contact'),
+    ('@bit_mages', 'https://vk.com/bit_mages'),
+    ('@turing_help', 'https://vk.com/turing_help'),
+    ('@qa_channel', 'https://vk.com/qa_channel')
+) AS c(telegram, vk)
+WHERE NOT EXISTS (
+  SELECT 1 FROM contacts x
+  WHERE COALESCE(x.telegram, '') = COALESCE(c.telegram, '')
+    AND COALESCE(x.vk, '') = COALESCE(c.vk, '')
+);
+
 -- Settings: make results and tasks visible
 UPDATE settings SET value = 'true' WHERE key = 'results_visible';
 UPDATE settings SET value = 'true' WHERE key = 'tasks_visible';
+
+-- Set default deadline only if empty (UTC ISO string)
+UPDATE settings
+SET value = to_char((NOW() + INTERVAL '2 days') AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+WHERE key = 'results_deadline' AND (value = '' OR value IS NULL);
