@@ -138,7 +138,7 @@
                 <h3>{{ item.title }}</h3>
                 <span class="news-date">{{ formatDate(item.publishedAt) }}</span>
               </div>
-              <p class="news-content">{{ item.content }}</p>
+              <div class="news-content" v-html="item.content"></div>
             </div>
           </div>
           <div v-else-if="!loading" class="empty-state">

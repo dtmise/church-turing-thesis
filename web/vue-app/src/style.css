@@ -98,6 +98,14 @@ body {
 .news-header h3 { font-size: 14px; font-weight: 600; margin: 0; line-height: 1.4; }
 .news-date { font-size: 12px; color: var(--text-tertiary); white-space: nowrap; flex-shrink: 0; }
 .news-content { color: var(--text-secondary); font-size: 13px; line-height: 1.5; margin: 0; }
+.news-content p { margin: 0 0 0.4em; }
+.news-content p:last-child { margin-bottom: 0; }
+.news-content h2 { font-size: 15px; font-weight: 600; margin: 0.5em 0 0.2em; color: var(--text-primary); }
+.news-content ul, .news-content ol { padding-left: 1.4em; margin: 0.3em 0; }
+.news-content blockquote { border-left: 3px solid #DDD; padding-left: 10px; margin: 0.4em 0; color: #888; }
+.news-content code { background: #F0F0F0; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.news-content a { color: #007AFF; text-decoration: underline; }
+.news-content strong { color: var(--text-primary); }
 
 .loading-spinner { text-align: center; padding: 16px; color: var(--text-tertiary); font-size: 14px; }
 .empty-state { text-align: center; padding: 16px; color: var(--text-tertiary); }

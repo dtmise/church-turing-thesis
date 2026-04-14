@@ -60,7 +60,7 @@
           <div v-for="(item, i) in news" :key="item.id" class="content-row">
             <div class="row-main">
               <span class="row-title">{{ item.title }}</span>
-              <span class="row-caption">{{ item.content }}</span>
+              <span class="row-caption">{{ stripHtml(item.content) }}</span>
             </div>
             <div class="row-right">
               <span class="row-date">{{ formatDate(item.publishedAt) }}</span>
@@ -367,7 +367,7 @@
 
     <!-- News modal -->
     <div v-if="newsModal" class="modal" @click.self="newsModal = false">
-      <div class="modal-content">
+      <div class="modal-content modal-content-news">
         <span class="close" @click="newsModal = false">&times;</span>
         <h3>{{ editingNews ? 'Редактировать новость' : 'Новая новость' }}</h3>
         <form @submit.prevent="saveNews">
@@ -375,9 +375,41 @@
             <label>Заголовок</label>
             <input v-model="newsForm.title" type="text" required>
           </div>
-          <div class="form-group">
-            <label>Содержание</label>
-            <textarea v-model="newsForm.content" required rows="5"></textarea>
+          <div class="news-editor-columns">
+            <!-- Left: editor -->
+            <div class="news-editor-left">
+              <label>Содержание</label>
+              <div class="editor-wrap">
+                <div v-if="newsEditor" class="editor-toolbar">
+                  <button type="button" :class="{ active: newsEditor.isActive('bold') }" @click="newsEditor.chain().focus().toggleBold().run()" title="Жирный"><b>B</b></button>
+                  <button type="button" :class="{ active: newsEditor.isActive('italic') }" @click="newsEditor.chain().focus().toggleItalic().run()" title="Курсив"><i>I</i></button>
+                  <button type="button" :class="{ active: newsEditor.isActive('strike') }" @click="newsEditor.chain().focus().toggleStrike().run()" title="Зачёркнутый"><s>S</s></button>
+                  <span class="toolbar-sep"></span>
+                  <button type="button" :class="{ active: newsEditor.isActive('heading', { level: 2 }) }" @click="newsEditor.chain().focus().toggleHeading({ level: 2 }).run()" title="Заголовок">H</button>
+                  <button type="button" :class="{ active: newsEditor.isActive('bulletList') }" @click="newsEditor.chain().focus().toggleBulletList().run()" title="Список">•</button>
+                  <button type="button" :class="{ active: newsEditor.isActive('orderedList') }" @click="newsEditor.chain().focus().toggleOrderedList().run()" title="Нумерованный список">1.</button>
+                  <button type="button" :class="{ active: newsEditor.isActive('blockquote') }" @click="newsEditor.chain().focus().toggleBlockquote().run()" title="Цитата">❝</button>
+                  <span class="toolbar-sep"></span>
+                  <button type="button" :class="{ active: newsEditor.isActive('code') }" @click="newsEditor.chain().focus().toggleCode().run()" title="Код">&lt;/&gt;</button>
+                  <button type="button" :class="{ active: newsEditor.isActive('link') }" @click="toggleLink" title="Ссылка">🔗</button>
+                  <span class="toolbar-sep"></span>
+                  <button type="button" @click="newsEditor.chain().focus().undo().run()" title="Отменить">↩</button>
+                  <button type="button" @click="newsEditor.chain().focus().redo().run()" title="Повторить">↪</button>
+                </div>
+                <editor-content :editor="newsEditor" class="editor-content" />
+              </div>
+            </div>
+            <!-- Right: live preview -->
+            <div class="news-editor-right">
+              <label>Предпросмотр</label>
+              <div class="news-preview-card">
+                <div class="news-header">
+                  <h3>{{ newsForm.title || 'Без заголовка' }}</h3>
+                  <span class="news-date">{{ formatDate(new Date()) }}</span>
+                </div>
+                <div class="news-content" v-html="newsPreviewHtml"></div>
+              </div>
+            </div>
           </div>
           <button type="submit" class="btn-submit">{{ editingNews ? 'Сохранить' : 'Опубликовать' }}</button>
         </form>
@@ -428,6 +460,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useEditor, EditorContent } from '@tiptap/vue-3'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
 import { auth } from '../composables/auth'
 import { api } from '../composables/api'
 import { useNotification } from '../composables/notification'
@@ -466,6 +501,19 @@ const newsModal = ref(false)
 const editingNews = ref(null)
 const newsForm = ref({ title: '', content: '' })
 const deleteTarget = ref(null)
+
+const newsPreviewHtml = ref('')
+
+const newsEditor = useEditor({
+  extensions: [
+    StarterKit,
+    Link.configure({ openOnClick: false }),
+  ],
+  content: '',
+  onUpdate({ editor }) {
+    newsPreviewHtml.value = editor.getHTML()
+  },
+})
 
 const taskModal = ref(false)
 const editingTask = ref(null)
@@ -791,6 +839,12 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function stripHtml(html) {
+  if (!html) return ''
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return doc.body.textContent || ''
+}
+
 function tgLink(val) {
   if (!val) return '#'
   val = val.trim()
@@ -812,17 +866,23 @@ function vkLink(val) {
 function openCreateNews() {
   editingNews.value = null
   newsForm.value = { title: '', content: '' }
+  newsEditor.value?.commands.setContent('')
+  newsPreviewHtml.value = ''
   newsModal.value = true
 }
 
 function openEditNews(item) {
   editingNews.value = item
   newsForm.value = { title: item.title, content: item.content }
+  newsEditor.value?.commands.setContent(item.content || '')
+  newsPreviewHtml.value = item.content || ''
   newsModal.value = true
 }
 
 async function saveNews() {
-  const { title, content } = newsForm.value
+  const title = newsForm.value.title
+  const content = newsEditor.value?.getHTML() || ''
+  if (!title || !content || content === '<p></p>') return
   if (editingNews.value) {
     await api.adminUpdateNews(editingNews.value.id, title, content)
   } else {
@@ -830,6 +890,17 @@ async function saveNews() {
   }
   newsModal.value = false
   news.value = await api.adminGetNews()
+}
+
+function toggleLink() {
+  if (newsEditor.value?.isActive('link')) {
+    newsEditor.value.chain().focus().unsetLink().run()
+    return
+  }
+  const url = window.prompt('URL')
+  if (url) {
+    newsEditor.value.chain().focus().setLink({ href: url }).run()
+  }
 }
 
 function confirmDeleteNews(item) {
@@ -1706,4 +1777,160 @@ textarea:focus {
   border-radius: 6px;
   letter-spacing: 0.5px;
 }
+
+/* Rich text editor — two-column layout */
+.modal-content-news {
+  max-width: 960px;
+  width: 95vw;
+}
+.news-editor-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 8px;
+}
+.news-editor-columns > div > label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+}
+@media (max-width: 700px) {
+  .news-editor-columns {
+    grid-template-columns: 1fr;
+  }
+}
+.editor-wrap {
+  border: 1px solid #E5E5E5;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.editor-wrap:focus-within {
+  border-color: #999;
+}
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px 8px;
+  background: #F9F9F9;
+  border-bottom: 1px solid #E5E5E5;
+}
+.editor-toolbar button {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.15s;
+}
+.editor-toolbar button:hover {
+  background: #ECECEC;
+}
+.editor-toolbar button.active {
+  background: #E0E0E0;
+  border-color: #CCC;
+  color: #000;
+}
+.toolbar-sep {
+  width: 1px;
+  background: #DDD;
+  margin: 4px 4px;
+}
+.editor-content {
+  min-height: 220px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.editor-content :deep(.tiptap) {
+  padding: 10px 14px;
+  min-height: 220px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #000;
+}
+.editor-content :deep(.tiptap p) {
+  margin: 0 0 0.5em;
+}
+.editor-content :deep(.tiptap h2) {
+  font-size: 18px;
+  margin: 0.6em 0 0.3em;
+}
+.editor-content :deep(.tiptap ul),
+.editor-content :deep(.tiptap ol) {
+  padding-left: 1.5em;
+  margin: 0.3em 0;
+}
+.editor-content :deep(.tiptap blockquote) {
+  border-left: 3px solid #DDD;
+  padding-left: 12px;
+  margin: 0.5em 0;
+  color: #666;
+}
+.editor-content :deep(.tiptap code) {
+  background: #F0F0F0;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.editor-content :deep(.tiptap a) {
+  color: #007AFF;
+  text-decoration: underline;
+}
+
+/* News preview card (right column) */
+.news-editor-right {
+  display: flex;
+  flex-direction: column;
+}
+.news-preview-card {
+  background: #F5F5F5;
+  border-radius: 10px;
+  padding: 12px 16px;
+  overflow-y: auto;
+  max-height: 460px;
+}
+.news-preview-card .news-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+  gap: 10px;
+}
+.news-preview-card .news-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+}
+.news-preview-card .news-date {
+  font-size: 12px;
+  color: #8E8E93;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.news-preview-card .news-content {
+  color: #555;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+.news-preview-card .news-content p { margin: 0 0 0.4em; }
+.news-preview-card .news-content p:last-child { margin-bottom: 0; }
+.news-preview-card .news-content h2 { font-size: 15px; font-weight: 600; margin: 0.5em 0 0.2em; color: #000; }
+.news-preview-card .news-content ul,
+.news-preview-card .news-content ol { padding-left: 1.4em; margin: 0.3em 0; }
+.news-preview-card .news-content blockquote { border-left: 3px solid #DDD; padding-left: 10px; margin: 0.4em 0; color: #888; }
+.news-preview-card .news-content code { background: #E8E8E8; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.news-preview-card .news-content a { color: #007AFF; text-decoration: underline; }
+.news-preview-card .news-content strong { color: #000; }
 </style>
